@@ -518,343 +518,378 @@ async def main():
                 # Wait for page to load
                 await page.wait_for_timeout(2000)  # 2-second wait for page to load
                 
-                profile_link_selector = RESUME_LINK_SELECTOR
-                print(f"--- 使用预设选择器: '{profile_link_selector}' ---")
-                
-                profile_links_locators = await page.locator(profile_link_selector).all()
-                
-                if not profile_links_locators:
-                    print(f"--- 公司 '{target_company}': 未找到简历链接，将跳至下一个公司 ---")
-                    continue
+                page_number = 1
+                while True:
+                    print(f"\n--- 正在处理公司 '{target_company}' 的第 {page_number} 页 ---")
 
-                # --- [!!! 修改: 获取总数 !!!] ---
-                total_links = len(profile_links_locators)
-                print(f"--- 公司 '{target_company}': 共找到 {total_links} 个简历链接，开始筛选... ---")
-                # --- [!!! 修改结束 !!!] ---
+                    profile_link_selector = RESUME_LINK_SELECTOR
+                    print(f"--- 使用预设选择器: '{profile_link_selector}' ---")
+                    
+                    # Give the page a moment to settle before looking for links
+                    await page.wait_for_timeout(1000)
+                    profile_links_locators = await page.locator(profile_link_selector).all()
+                    
+                    if not profile_links_locators:
+                        if page_number == 1:
+                            print(f"--- 公司 '{target_company}': 第 1 页未找到简历链接，将跳至下一个公司 ---")
+                        else:
+                            print(f"--- 公司 '{target_company}': 第 {page_number} 页未找到简历链接，已达末页，结束该公司处理 ---")
+                        break # No links on the page, break pagination loop
 
-                for i, link_locator in enumerate(profile_links_locators): 
-                    
-                    # --- [!!! 修改点 5: 更新已处理计数器 m !!!] ---
-                    with contacts_lock:
-                        processed_resumes_count += 1
-                    
-                    print(f"\n--- 正在处理公司 '{target_company}' 的第 {i+1} / {total_links} 个简历 (总计已看 {processed_resumes_count}) ---")
-                    # --- [!!! 修改结束 !!!] ---
-                    
-                    # 检查是否需要暂停
-                    while not pause_flag.is_set():
-                        time.sleep(0.1)  # 暂停时短暂休眠
-                    
-                    try:
-                        actual_login_date = "" # 初始化最后登录时间变量
-                        # <-- [Gemini 已确认] -->
-                        async with context.expect_page() as new_page_info:
-                            await link_locator.click(timeout=5000) # 点击你找到的SOP'器
+                    total_links_on_page = len(profile_links_locators)
+                    print(f"--- 公司 '{target_company}', 第 {page_number} 页: 共找到 {total_links_on_page} 个简历链接，开始筛选... ---")
+
+                    for i, link_locator in enumerate(profile_links_locators): 
                         
-                        profile_page = await new_page_info.value
-                        await profile_page.wait_for_load_state('domcontentloaded')
-                        profile_url = profile_page.url 
-                        # <-- [Gemini 逻辑结束] -->
-
-
-                        # Wait for page to load
-                        await profile_page.wait_for_timeout(2000)
-
-                        # --- [!!! 新增: 提取并判断最后登录时间 !!!] ---
+                        # --- [!!! 修改点 5: 更新已处理计数器 m !!!] ---
+                        with contacts_lock:
+                            processed_resumes_count += 1
+                        
+                        print(f"\n--- 正在处理公司 '{target_company}' 的第 {page_number} 页, 第 {i+1}/{total_links_on_page} 个简历 (总计已看 {processed_resumes_count}) ---")
+                        # --- [!!! 修改结束 !!!] ---
+                        
+                        # 检查是否需要暂停
+                        while not pause_flag.is_set():
+                            time.sleep(0.1)  # 暂停时短暂休眠
+                        
                         try:
-                            last_login_selector = "#resume-detail-single > div.Y9hQO > div > div.ant-tabs-nav > div.ant-tabs-extra-content > div > span:nth-child(3)"
-                            last_login_text = await profile_page.locator(last_login_selector).text_content(timeout=5000)
+                            actual_login_date = "" # 初始化最后登录时间变量
+                            # <-- [Gemini 已确认] -->
+                            async with context.expect_page() as new_page_info:
+                                await link_locator.click(timeout=5000) # 点击你找到的SOP'器
                             
-                            match = re.search(r'(\d{4}/\d{2}/\d{2})', last_login_text)
-                            if not match:
-                                raise ValueError("无法从文本中解析出YYYY/MM/DD格式的日期")
-                            
-                            actual_login_date = match.group(1) # 赋值给外部变量
-                            print(f"--- 提取到最后登录时间: {actual_login_date} ---")
+                            profile_page = await new_page_info.value
+                            await profile_page.wait_for_load_state('domcontentloaded')
+                            profile_url = profile_page.url 
+                            # <-- [Gemini 逻辑结束] -->
 
-                            # 如果用户输入了最早登录时间，则执行此项检查
-                            if earliest_login_date_str:
-                                if actual_login_date < earliest_login_date_str:
-                                    print(f"--- 登录时间不符: {actual_login_date} 早于要求的 {earliest_login_date_str}，跳过 ---")
+
+                            # Wait for page to load
+                            await profile_page.wait_for_timeout(2000)
+
+                            # --- [!!! 新增: 提取并判断最后登录时间 !!!] ---
+                            try:
+                                last_login_selector = "#resume-detail-single > div.Y9hQO > div > div.ant-tabs-nav > div.ant-tabs-extra-content > div > span:nth-child(3)"
+                                last_login_text = await profile_page.locator(last_login_selector).text_content(timeout=5000)
+                                
+                                match = re.search(r'(\d{4}/\d{2}/\d{2})', last_login_text)
+                                if not match:
+                                    raise ValueError("无法从文本中解析出YYYY/MM/DD格式的日期")
+                                
+                                actual_login_date = match.group(1) # 赋值给外部变量
+                                print(f"--- 提取到最后登录时间: {actual_login_date} ---")
+
+                                # 如果用户输入了最早登录时间，则执行此项检查
+                                if earliest_login_date_str:
+                                    if actual_login_date < earliest_login_date_str:
+                                        print(f"--- 登录时间不符: {actual_login_date} 早于要求的 {earliest_login_date_str}，跳过 ---")
+                                        await profile_page.close()
+                                        continue
+                                    else:
+                                        print(f"--- 登录时间符合，继续处理 ---")
+                            except Exception as e:
+                                # 如果提取失败，但用户又要求了最早登录时间，则必须跳过
+                                if earliest_login_date_str:
+                                    print(f"--- 提取或判断 [最后登录时间] 失败: {e}，因已设置最早登录时间要求，跳过此人 ---")
                                     await profile_page.close()
                                     continue
                                 else:
-                                    print(f"--- 登录时间符合，继续处理 ---")
-                        except Exception as e:
-                            # 如果提取失败，但用户又要求了最早登录时间，则必须跳过
-                            if earliest_login_date_str:
-                                print(f"--- 提取或判断 [最后登录时间] 失败: {e}，因已设置最早登录时间要求，跳过此人 ---")
-                                await profile_page.close()
-                                continue
-                            else:
-                                print(f"--- 提取 [最后登录时间] 失败: {e}，但未设置要求，继续处理 ---")
-                        # --- [!!! 新增结束 !!!] ---
-
-                        current_cv_selector = CV_TEXT_SELECTOR
-                        print(f"--- 使用预设CV文本选择器: '{current_cv_selector}' ---")
-                        
-                        cv_text = "" # 初始化
-                        try:
-                            cv_text = await profile_page.locator(current_cv_selector).text_content(timeout=5000)
-                        except Exception as e:
-                            print(f"提取简历文本失败: {e}。请检查选择器 {current_cv_selector}")
-                            print("--- 调试SOP：请将这个新打开的“简历详情页”另存为 HTML，然后发给我。---")
-                            await profile_page.close()
-                            continue
-                        
-                        work_time_selector = 'div.work-time, .work-duration, .time-text, .work-time-text, .contact-time, span.rd-work-time'
-                        raw_work_time = ""
-                        work_time = ""
-                        try:
-                            raw_work_time = await profile_page.locator(work_time_selector).first.text_content(timeout=5000)
-                            work_time = format_work_time(raw_work_time) # <-- 应用格式化
-                            print(f"--- 提取在职时间: {work_time} (原始: {raw_work_time.strip()}) ---")
-                        except Exception as e:
-                            print(f"--- 提取 [在职时间] 失败: {e}，跳过此人 ---")
-                            await profile_page.close()
-                            continue
-
-                        if not is_departure_date_ok(work_time, min_departure_str):
-                            print(f"--- 日期不符: 候选人离职于 {work_time} (要求不早于 {min_departure_str})，跳过 ---")
-                            await profile_page.close()
-                            continue
-                        else:
-                            print(f"--- 日期符合: {work_time} (要求: {min_departure_str})，进入AI判断 ---")
-
-
-                        while not pause_flag.is_set():
-                            time.sleep(0.1)
-                        
-                        if is_match_volc(cv_text, briefing_text):
-                            print(f"AI 判断匹配: {profile_url}")
-
-                            # --- [!!! 新增逻辑: 提取在职公司并进行匹配 !!!] ---
-                            company_selector = 'div.company-name, .work-company, .company-text, .company-title, .contact-company, div.rd-work-comp > h5'
-                            company = ""
-                            try:
-                                company = await profile_page.locator(company_selector).first.text_content(timeout=5000)
-                                print(f"--- 成功提取到 [在职公司] 用于匹配: {company.strip()} ---")
-                            except Exception as e:
-                                print(f"--- 提取 [在职公司] 失败: {e}，无法执行公司匹配，跳过 ---")
-                                await profile_page.close()
-                                continue
-
-                            # 核心匹配逻辑: 用户搜索的公司名是否被包含于最近任职的公司名中 (忽略大小写)
-                            if target_company.lower() not in company.lower():
-                                print(f"--- 公司不匹配: 最近任职公司 '{company.strip()}' 中不包含搜索词 '{target_company}'，跳过 ---")
-                                await profile_page.close()
-                                continue
-                            else:
-                                print(f"--- 公司匹配通过: '{company.strip()}' 包含 '{target_company}'，继续处理 ---")
-                            # --- [!!! 新增逻辑结束 !!!] ---
-                            
-                            # --- [!!! 新增: 调用AI进行Profile总结 !!!] ---
-                            print("--- 正在生成Profile总结... ---")
-                            summarized_profile = summarize_profile_volc(cv_text, target_company)
+                                    print(f"--- 提取 [最后登录时间] 失败: {e}，但未设置要求，继续处理 ---")
                             # --- [!!! 新增结束 !!!] ---
-                            
-                            name = ""
-                            gender = "" 
-                            clean_name = "" 
-                            # company 变量已在前面提取和使用
-                            title = ""
-                            contact_info = None
 
-                            name_selector = 'div.resume-preview-name, .person-name, .resume-name, .name-text, .contact-name, h4.name'
-                            gender_info_selector = 'div.basic-cont > div.sep-info' # 包含性别、年龄、地区的行
-                            title_selector = 'div.position-name, .work-position, .position-text, .position-title, .contact-position, h6.job-name'
+                            current_cv_selector = CV_TEXT_SELECTOR
+                            print(f"--- 使用预设CV文本选择器: '{current_cv_selector}' ---")
                             
+                            cv_text = "" # 初始化
                             try:
-                                name = await profile_page.locator(name_selector).first.text_content(timeout=5000) # 5秒超时
+                                cv_text = await profile_page.locator(current_cv_selector).text_content(timeout=5000)
                             except Exception as e:
-                                print(f"--- 提取 [姓名] 失败: {e} ---")
-                                pass
+                                print(f"提取简历文本失败: {e}。请检查选择器 {current_cv_selector}")
+                                print("--- 调试SOP：请将这个新打开的“简历详情页”另存为 HTML，然后发给我。---")
+                                await profile_page.close()
+                                continue
                             
+                            work_time_selector = 'div.work-time, .work-duration, .time-text, .work-time-text, .contact-time, span.rd-work-time'
+                            raw_work_time = ""
+                            work_time = ""
                             try:
-                                info_text = await profile_page.locator(gender_info_selector).first.inner_text(timeout=5000)
-                                gender_match = re.search(r'\s*(男|女)\s*', info_text)
-                                if gender_match:
-                                    gender = gender_match.group(1)
-                                    print(f"--- G (G): {gender} ---")
-                                else:
-                                    print(f"--- 未能从 '{info_text}' 中提取到性别 ---")
+                                raw_work_time = await profile_page.locator(work_time_selector).first.text_content(timeout=5000)
+                                work_time = format_work_time(raw_work_time) # <-- 应用格式化
+                                print(f"--- 提取在职时间: {work_time} (原始: {raw_work_time.strip()}) ---")
                             except Exception as e:
-                                print(f"--- 提取 [性别] 失败: {e} ---")
-                                pass
+                                print(f"--- 提取 [在职时间] 失败: {e}，跳过此人 ---")
+                                await profile_page.close()
+                                continue
 
-                            clean_name = name.strip().replace("*", "") # <-- 移除星号
-                            
-                            if should_format_name_to_initials:
-                                clean_name = format_name_to_initials(clean_name, gender)
-                                print(f"--- 格式化为首字母缩写后 [姓名]: {clean_name} ---")
-                            elif gender and "先生" not in clean_name and "女士" not in clean_name:
-                                if gender == "男":
-                                    clean_name = clean_name + "先生"
-                                elif gender == "女":
-                                    clean_name = clean_name + "女士"
-                                print(f"--- 格式化后 [姓名]: {clean_name} ---")
+                            if not is_departure_date_ok(work_time, min_departure_str):
+                                print(f"--- 日期不符: 候选人离职于 {work_time} (要求不早于 {min_departure_str})，跳过 ---")
+                                await profile_page.close()
+                                continue
                             else:
-                                print(f"--- 成功提取到 [姓名]: {clean_name} (无需添加称谓) ---")
-                            
-                            # Note: The original 'company' extraction block is removed from here
-                            # as it's now handled before the AI summary.
-                                
-                            try:
-                                title = await profile_page.locator(title_selector).first.text_content(timeout=5000)
-                                print(f"--- 成功提取到 [职位]: {title.strip()} ---")
-                            except Exception as e:
-                                print(f"--- 提取 [职位] 失败: {e} ---")
-                                pass
-                                
-                            print(f"--- (确认) 在职时间: {work_time} ---")
+                                print(f"--- 日期符合: {work_time} (要求: {min_departure_str})，进入AI判断 ---")
 
-                            contact_info = None
-                            if should_view_phone:
+
+                            while not pause_flag.is_set():
+                                time.sleep(0.1)
+                            
+                            if is_match_volc(cv_text, briefing_text):
+                                print(f"AI 判断匹配: {profile_url}")
+
+                                # --- [!!! 新增逻辑: 提取在职公司并进行匹配 !!!] ---
+                                company_selector = 'div.company-name, .work-company, .company-text, .company-title, .contact-company, div.rd-work-comp > h5'
+                                company = ""
                                 try:
-                                    cloud_phone_selector = '#resume-detail-basic-info > div.basic-cont > dl > dd:nth-child(1) > span.view-phone-btn, span.view-phone-btn:has-text("查看云电话")'
-                                    cloud_phone_button = profile_page.locator(cloud_phone_selector).first
-                                    
-                                    is_already_paid = False
-                                    try:
-                                        await cloud_phone_button.wait_for(state="visible", timeout=3000) 
-                                        print("--- (优先检查) 检测到“查看云电话”按钮，判定为已购买 ---")
-                                        await cloud_phone_button.click(timeout=3000) # 点击它以显示号码
-                                        await profile_page.wait_for_timeout(2000) # 等待号码加载
-                                        is_already_paid = True
-                                    except Exception:
-                                        print("--- (优先检查) 未检测到“查看云电话”按钮，判定为未购买 ---")
-                                        is_already_paid = False
-
-                                    if not is_already_paid:
-                                        contact_button_selector = 'button:has-text("联系"), .get-chat-btn'
-                                        await profile_page.locator(contact_button_selector).first.click(timeout=5000)
-                                        print("--- 已点击“查看联系方式”按钮 ---")
-
-                                        try:
-                                            pay_button_selector = 'button:has-text("立即获得"), button:has-text("确认支付"), button:has-text("立即打开"), button:has-text("立即获取")'
-                                            pay_button = profile_page.locator(pay_button_selector).first
-                                            
-                                            await pay_button.wait_for(state="visible", timeout=3000) # 等待最多3秒
-                                            print("--- 检测到支付弹窗，尝试点击支付按钮 ---")
-                                            await pay_button.click()
-                                            await profile_page.wait_for_timeout(2000)
-
-                                        except Exception as e:
-                                            print(f"--- 未检测到支付弹窗 (或处理出错: {e})，直接进入下一步 ---")
-                                            pass
-                                    
-                                    try:
-                                        image_selector = 'img[src*="liepin.com/v1/getcontact"]' # 使用更通用的图片src选择器
-                                        image_locator = profile_page.locator(image_selector).first
-                                        await image_locator.wait_for(state="visible", timeout=5000)
-                                        
-                                        print("--- 检测到图片格式的联系方式，准备截图 ---")
-                                        
-                                        name_for_file = clean_name if clean_name else f"Unknown_contact_{i+1}"
-                                        image_filename = f"{name_for_file}.png"
-                                        image_path = os.path.join(os.getcwd(), image_filename)
-                                        
-                                        await image_locator.screenshot(path=image_path)
-                                        
-                                        contact_info = image_path # 在Excel中记录图片的完整路径
-                                        print(f"--- 成功截图并保存为: {image_path} ---")
-
-                                    except Exception:
-                                        print("--- 未找到图片格式的联系方式，尝试提取文本格式 ---")
-                                        try:
-                                            await profile_page.wait_for_timeout(2000)  # 等待2秒让联系方式加载
-                                            
-                                            phone_selectors = [
-                                                'div.cloud-phone h3', 
-                                                '.contact-phone-text', 
-                                                '#resume-detail-basic-info > div.basic-cont > dl > dd:nth-child(1) > span.view-phone-btn',
-                                                'span.view-phone-btn',  # 简化选择器
-                                                '.basic-cont dl dd span'  # 一般性选择器
-                                            ]
-                                            
-                                            phone_number = None
-                                            for selector in phone_selectors:
-                                                try:
-                                                    phone_locator = profile_page.locator(selector).first
-                                                    await phone_locator.wait_for(state="visible", timeout=5000)
-                                                    phone_number = await phone_locator.text_content()
-                                                    if phone_number and phone_number.strip():  # 确保获取到非空文本
-                                                        break
-                                                except Exception:
-                                                    continue  # 尝试下一个选择器
-                                            
-                                            if phone_number:
-                                                cleaned_phone = phone_number.replace(" ", "") # 移除所有空格
-                                                contact_info = f"云 {cleaned_phone}" # 云 后面加一个空格
-                                                print(f"--- 成功提取文本联系方式: {contact_info} ---")
-                                            else:
-                                                print("--- 尝试从页面源码中查找电话号码 ---")
-                                                page_content = await profile_page.content()
-                                                phone_pattern = r'1[3-9]\d{9}'
-                                                phone_matches = re.findall(phone_pattern, page_content)
-                                                if phone_matches:
-                                                    contact_info = f"云 {phone_matches[0]}" # 匹配结果已经是无空格的
-                                                    print(f"--- 从页面源码中提取到电话号码: {contact_info} ---")
-                                                else:
-                                                    raise ValueError("无法在页面上找到电话号码")
-                                        except Exception:
-                                            print("--- 提取图片和文本联系方式均失败 ---")
-                                            raise ValueError("无法找到联系方式")
+                                    company = await profile_page.locator(company_selector).first.text_content(timeout=5000)
+                                    print(f"--- 成功提取到 [在职公司] 用于匹配: {company.strip()} ---")
                                 except Exception as e:
-                                    print(f"提取联系方式的整体流程(步骤6)出错: {e}")
+                                    print(f"--- 提取 [在职公司] 失败: {e}，无法执行公司匹配，跳过 ---")
+                                    await profile_page.close()
+                                    continue
+
+                                # 核心匹配逻辑: 用户搜索的公司名是否被包含于最近任职的公司名中 (忽略大小写)
+                                if target_company.lower() not in company.lower():
+                                    print(f"--- 公司不匹配: 最近任职公司 '{company.strip()}' 中不包含搜索词 '{target_company}'，跳过 ---")
+                                    await profile_page.close()
+                                    continue
+                                else:
+                                    print(f"--- 公司匹配通过: '{company.strip()}' 包含 '{target_company}'，继续处理 ---")
+                                # --- [!!! 新增逻辑结束 !!!] ---
+                                
+                                # --- [!!! 新增: 调用AI进行Profile总结 !!!] ---
+                                print("--- 正在生成Profile总结... ---")
+                                summarized_profile = summarize_profile_volc(cv_text, target_company)
+                                # --- [!!! 新增结束 !!!] ---
+                                
+                                name = ""
+                                gender = "" 
+                                clean_name = "" 
+                                # company 变量已在前面提取和使用
+                                title = ""
+                                contact_info = None
+
+                                name_selector = 'div.resume-preview-name, .person-name, .resume-name, .name-text, .contact-name, h4.name'
+                                gender_info_selector = 'div.basic-cont > div.sep-info' # 包含性别、年龄、地区的行
+                                title_selector = 'div.position-name, .work-position, .position-text, .position-title, .contact-position, h6.job-name'
+                                
+                                try:
+                                    name = await profile_page.locator(name_selector).first.text_content(timeout=5000) # 5秒超时
+                                except Exception as e:
+                                    print(f"--- 提取 [姓名] 失败: {e} ---")
+                                    pass
+                                
+                                try:
+                                    info_text = await profile_page.locator(gender_info_selector).first.inner_text(timeout=5000)
+                                    gender_match = re.search(r'\s*(男|女)\s*', info_text)
+                                    if gender_match:
+                                        gender = gender_match.group(1)
+                                        print(f"--- G (G): {gender} ---")
+                                    else:
+                                        print(f"--- 未能从 '{info_text}' 中提取到性别 ---")
+                                except Exception as e:
+                                    print(f"--- 提取 [性别] 失败: {e} ---")
+                                    pass
+
+                                clean_name = name.strip().replace("*", "") # <-- 移除星号
+                                
+                                if should_format_name_to_initials:
+                                    clean_name = format_name_to_initials(clean_name, gender)
+                                    print(f"--- 格式化为首字母缩写后 [姓名]: {clean_name} ---")
+                                elif gender and "先生" not in clean_name and "女士" not in clean_name:
+                                    if gender == "男":
+                                        clean_name = clean_name + "先生"
+                                    elif gender == "女":
+                                        clean_name = clean_name + "女士"
+                                    print(f"--- 格式化后 [姓名]: {clean_name} ---")
+                                else:
+                                    print(f"--- 成功提取到 [姓名]: {clean_name} (无需添加称谓) ---")
+                                
+                                # Note: The original 'company' extraction block is removed from here
+                                # as it's now handled before the AI summary.
+                                    
+                                try:
+                                    title = await profile_page.locator(title_selector).first.text_content(timeout=5000)
+                                    print(f"--- 成功提取到 [职位]: {title.strip()} ---")
+                                except Exception as e:
+                                    print(f"--- 提取 [职位] 失败: {e} ---")
+                                    pass
+                                    
+                                print(f"--- (确认) 在职时间: {work_time} ---")
+
+                                contact_info = None
+                                if should_view_phone:
+                                    try:
+                                        cloud_phone_selector = '#resume-detail-basic-info > div.basic-cont > dl > dd:nth-child(1) > span.view-phone-btn, span.view-phone-btn:has-text("查看云电话")'
+                                        cloud_phone_button = profile_page.locator(cloud_phone_selector).first
+                                        
+                                        is_already_paid = False
+                                        try:
+                                            await cloud_phone_button.wait_for(state="visible", timeout=3000) 
+                                            print("--- (优先检查) 检测到“查看云电话”按钮，判定为已购买 ---")
+                                            await cloud_phone_button.click(timeout=3000) # 点击它以显示号码
+                                            await profile_page.wait_for_timeout(2000) # 等待号码加载
+                                            is_already_paid = True
+                                        except Exception:
+                                            print("--- (优先检查) 未检测到“查看云电话”按钮，判定为未购买 ---")
+                                            is_already_paid = False
+
+                                        if not is_already_paid:
+                                            contact_button_selector = 'button:has-text("联系"), .get-chat-btn'
+                                            await profile_page.locator(contact_button_selector).first.click(timeout=5000)
+                                            print("--- 已点击“查看联系方式”按钮 ---")
+
+                                            try:
+                                                pay_button_selector = 'button:has-text("立即获得"), button:has-text("确认支付"), button:has-text("立即打开"), button:has-text("立即获取")'
+                                                pay_button = profile_page.locator(pay_button_selector).first
+                                                
+                                                await pay_button.wait_for(state="visible", timeout=3000) # 等待最多3秒
+                                                print("--- 检测到支付弹窗，尝试点击支付按钮 ---")
+                                                await pay_button.click()
+                                                await profile_page.wait_for_timeout(2000)
+
+                                            except Exception as e:
+                                                print(f"--- 未检测到支付弹窗 (或处理出错: {e})，直接进入下一步 ---")
+                                                pass
+                                        
+                                        try:
+                                            image_selector = 'img[src*="liepin.com/v1/getcontact"]' # 使用更通用的图片src选择器
+                                            image_locator = profile_page.locator(image_selector).first
+                                            await image_locator.wait_for(state="visible", timeout=5000)
+                                            
+                                            print("--- 检测到图片格式的联系方式，准备截图 ---")
+                                            
+                                            name_for_file = clean_name if clean_name else f"Unknown_contact_{i+1}"
+                                            image_filename = f"{name_for_file}.png"
+                                            image_path = os.path.join(os.getcwd(), image_filename)
+                                            
+                                            await image_locator.screenshot(path=image_path)
+                                            
+                                            contact_info = image_path # 在Excel中记录图片的完整路径
+                                            print(f"--- 成功截图并保存为: {image_path} ---")
+
+                                        except Exception:
+                                            print("--- 未找到图片格式的联系方式，尝试提取文本格式 ---")
+                                            try:
+                                                await profile_page.wait_for_timeout(2000)  # 等待2秒让联系方式加载
+                                                
+                                                phone_selectors = [
+                                                    'div.cloud-phone h3', 
+                                                    '.contact-phone-text', 
+                                                    '#resume-detail-basic-info > div.basic-cont > dl > dd:nth-child(1) > span.view-phone-btn',
+                                                    'span.view-phone-btn',  # 简化选择器
+                                                    '.basic-cont dl dd span'  # 一般性选择器
+                                                ]
+                                                
+                                                phone_number = None
+                                                for selector in phone_selectors:
+                                                    try:
+                                                        phone_locator = profile_page.locator(selector).first
+                                                        await phone_locator.wait_for(state="visible", timeout=5000)
+                                                        phone_number = await phone_locator.text_content()
+                                                        if phone_number and phone_number.strip():  # 确保获取到非空文本
+                                                            break
+                                                    except Exception:
+                                                        continue  # 尝试下一个选择器
+                                                
+                                                if phone_number:
+                                                    cleaned_phone = phone_number.replace(" ", "") # 移除所有空格
+                                                    contact_info = f"云 {cleaned_phone}" # 云 后面加一个空格
+                                                    print(f"--- 成功提取文本联系方式: {contact_info} ---")
+                                                else:
+                                                    print("--- 尝试从页面源码中查找电话号码 ---")
+                                                    page_content = await profile_page.content()
+                                                    phone_pattern = r'1[3-9]\d{9}'
+                                                    phone_matches = re.findall(phone_pattern, page_content)
+                                                    if phone_matches:
+                                                        contact_info = f"云 {phone_matches[0]}" # 匹配结果已经是无空格的
+                                                        print(f"--- 从页面源码中提取到电话号码: {contact_info} ---")
+                                                    else:
+                                                        raise ValueError("无法在页面上找到电话号码")
+                                            except Exception:
+                                                print("--- 提取图片和文本联系方式均失败 ---")
+                                                raise ValueError("无法找到联系方式")
+                                    except Exception as e:
+                                        print(f"提取联系方式的整体流程(步骤6)出错: {e}")
+                                else:
+                                    print("--- 根据设置，跳过查看联系方式 ---")
+                                    contact_info = "未查看"
+
+                                # --- [!!! 修改: 保存数据时使用总结后的Profile !!!] ---
+                                with contacts_lock:
+                                    saved_contacts.append({
+                                        "分类": category,
+                                        "公司": target_company,
+                                        "姓名": clean_name,
+                                        "职位": title.strip(),
+                                        "在职公司": company.strip(),
+                                        "在职时间": work_time.strip(),
+                                        "云号码": contact_info if contact_info else "获取失败",
+                                        "简历链接": profile_url,
+                                        "Profile": summarized_profile, # 使用总结内容
+                                        "是否合作": "否",
+                                        "最后一次登录时间": actual_login_date
+                                    })
+                                    qualified_resumes_count += 1
+                                # --- [!!! 修改结束 !!!] ---
+                                print(f"成功保存候选人: {clean_name}, 职位: {title.strip()}, 在职时间: {work_time.strip()}, 联系方式: {contact_info if contact_info else '获取失败'}")
+                            
                             else:
-                                print("--- 根据设置，跳过查看联系方式 ---")
-                                contact_info = "未查看"
+                                print("AI 判断不匹配，跳过。")
 
-                            # --- [!!! 修改: 保存数据时使用总结后的Profile !!!] ---
-                            with contacts_lock:
-                                saved_contacts.append({
-                                    "分类": category,
-                                    "公司": target_company,
-                                    "姓名": clean_name,
-                                    "职位": title.strip(),
-                                    "在职公司": company.strip(),
-                                    "在职时间": work_time.strip(),
-                                    "云号码": contact_info if contact_info else "获取失败",
-                                    "简历链接": profile_url,
-                                    "Profile": summarized_profile, # 使用总结内容
-                                    "是否合作": "否",
-                                    "最后一次登录时间": actual_login_date
-                                })
-                                qualified_resumes_count += 1
-                            # --- [!!! 修改结束 !!!] ---
-                            print(f"成功保存候选人: {clean_name}, 职位: {title.strip()}, 在职时间: {work_time.strip()}, 联系方式: {contact_info if contact_info else '获取失败'}")
-                        
-                        else:
-                            print("AI 判断不匹配，跳过。")
-
-                        
-                        while not pause_flag.is_set():
-                            time.sleep(0.1)
-                        
-                        await profile_page.close()
-                        
-                        # --- [!!! 修改点 7: 打印当前进度 !!!] ---
-                        with contacts_lock:
-                            n = qualified_resumes_count
-                            m = processed_resumes_count
-                        print(f"--- 进度: {n}/{m} (合格/已看) ---")
-                        # --- [!!! 修改结束 !!!] ---
-
-                        await page.wait_for_timeout(random.randint(2000, 5000)) # 暂停2-5秒
-
-                    except Exception as e:
-                        print(f"处理第 {i+1} 个链接时发生未知错误: {e}")
-                        if 'profile_page' in locals() and not profile_page.is_closed():
+                            
+                            while not pause_flag.is_set():
+                                time.sleep(0.1)
+                            
                             await profile_page.close()
-                        
-                        # --- [!!! 新增: 即使出错也打印进度 !!!] ---
-                        with contacts_lock:
-                            n = qualified_resumes_count
-                            m = processed_resumes_count
-                        print(f"--- (出错) 进度: {n}/{m} (合格/已看) ---")
-                        # --- [!!! 修改结束 !!!] ---
-                        continue
+                            
+                            # --- [!!! 修改点 7: 打印当前进度 !!!] ---
+                            with contacts_lock:
+                                n = qualified_resumes_count
+                                m = processed_resumes_count
+                            print(f"--- 进度: {n}/{m} (合格/已看) ---")
+                            # --- [!!! 修改结束 !!!] ---
+
+                            await page.wait_for_timeout(random.randint(2000, 5000)) # 暂停2-5秒
+
+                        except Exception as e:
+                            print(f"处理第 {i+1} 个链接时发生未知错误: {e}")
+                            if 'profile_page' in locals() and not profile_page.is_closed():
+                                await profile_page.close()
+                            
+                            # --- [!!! 新增: 即使出错也打印进度 !!!] ---
+                            with contacts_lock:
+                                n = qualified_resumes_count
+                                m = processed_resumes_count
+                            print(f"--- (出错) 进度: {n}/{m} (合格/已看) ---")
+                            # --- [!!! 修改结束 !!!] ---
+                            continue
+                    
+                    # --- [!!! 新增: 翻页逻辑 !!!] ---
+                    next_button_selector = "#resultList > div.table-box > table > tfoot > tr > td:nth-child(2) > ul > li.ant-pagination-next > button"
+                    # 检查按钮是否被禁用的更可靠方法是检查其父 `li` 元素是否包含 `ant-pagination-disabled` 类
+                    next_button_parent_disabled_selector = "li.ant-pagination-next.ant-pagination-disabled"
+
+                    try:
+                        # 检查 'next' 按钮的父级 li 是否被禁用
+                        is_disabled = await page.locator(next_button_parent_disabled_selector).count() > 0
+                        if is_disabled:
+                            print(f"--- 已到达公司 '{target_company}' 的最后一页，翻页结束 ---")
+                            break  # 退出 while 循环
+
+                        next_button = page.locator(next_button_selector)
+                        if await next_button.count() > 0:
+                            print("--- 找到“下一页”按钮，准备翻页 ---")
+                            await next_button.click(timeout=5000)
+                            await page.wait_for_load_state('networkidle', timeout=10000)
+                            await page.wait_for_timeout(2000)  # 等待内容渲染
+                            page_number += 1
+                        else:
+                            print(f"--- 未找到“下一页”按钮，公司 '{target_company}' 的翻页结束 ---")
+                            break  # 退出 while 循环
+                    except Exception as e:
+                        print(f"--- 翻页时发生错误: {e} ---")
+                        print(f"--- 假定已是最后一页，公司 '{target_company}' 的翻页结束 ---")
+                        break  # 出错时退出
+                    # --- [!!! 新增结束 !!!] ---
             # --- [!!! 主循环结束 !!!] ---
 
         except Exception as e:
