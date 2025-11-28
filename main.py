@@ -372,9 +372,9 @@ async def main():
     im.add_step('view_phone', "是否需要查看联系方式? (y/N)", default='n')
     im.add_step('format_name', "姓名是否只保留首字母缩写? (y/N)", default='n')
     im.add_step('filename', "请输入输出文件名", default="output.xlsx")
-    im.add_step('min_departure', "请输入最早离职年限 (格式: YY/M 或 'Present')", default="00/1")
-    im.add_step('earliest_login', "请输入最早登录时间 (格式: YY/M)", default="")
-    im.add_step('zip_id', "请输入压缩包命名标识", default="DJH")
+    im.add_step('min_departure', "离职年限不早于 (格式: YY/M 或 'Present')", default="Present")
+    im.add_step('earliest_login', "最后一次登陆时间不晚于 (格式: YY/M)", default="")
+    im.add_step('zip_id', "请输入压缩包命名标识", default="ZTZ")
     
     data = im.run()
     
