@@ -10,3 +10,6 @@ state.json
 resumes/
 data/
 zips/
+
+# Virtual Environment
+.venv/

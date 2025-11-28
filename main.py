@@ -456,8 +456,8 @@ async def main():
     target_positions_input = input("请输入目标职位 (例如: 产品经理/数据分析师): ").strip()
     target_positions = [p.strip() for p in target_positions_input.split('/') if p.strip()]
     if not target_positions:
-        print("未输入职位，默认搜索 '产品经理'")
-        target_positions = ['产品经理']
+        print("未输入职位，默认不限制职位")
+        target_positions = ['']
     
     target_position_str = "/".join(target_positions)
     target_position_filename_part = "_".join(target_positions).replace('/', '_')
