@@ -14,7 +14,9 @@ from docx.shared import Pt
 from bs4 import BeautifulSoup
 import zipfile
 import shutil
+import shutil
 import sys
+from datetime import datetime
 
 # Add local libs to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'libs'))
@@ -228,6 +230,32 @@ def convert_date_to_value(date_str):
         return year * 100 + month
     
     return 0
+def parse_login_date_input(date_str):
+    """
+    解析用户输入的日期字符串，返回 datetime 对象。
+    支持格式: YYYY/MM/DD, YY/MM/DD, YYYY/MM, YY/MM
+    """
+    if not date_str:
+        return None
+    
+    date_str = date_str.strip().replace('-', '/') # 兼容横杠
+    
+    formats = [
+        "%Y/%m/%d", 
+        "%y/%m/%d", 
+        "%Y/%m", 
+        "%y/%m"
+    ]
+    
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(date_str, fmt)
+            return dt
+        except ValueError:
+            continue
+            
+    print(f"警告: 无法解析日期 '{date_str}'，将忽略此筛选条件。")
+    return None
 
 def is_departure_date_ok(formatted_work_time, min_departure_str):
     """
@@ -543,7 +571,12 @@ async def main():
         min_departure_str = "00/1"
         print("--- 未输入最早离职年限，默认不过滤 ---")
 
-    earliest_login_date_str = input("请输入最早的最后一次登录时间 (格式: YYYY/MM/DD，可留空): ").strip()
+    earliest_login_date_input = input("请输入最早的最后一次登录时间 (格式: YYYY/MM/DD 或 YY/M，例如 25/1，可留空): ").strip()
+    earliest_login_date = parse_login_date_input(earliest_login_date_input)
+    if earliest_login_date:
+        print(f"--- 已设定最早登录时间: {earliest_login_date.strftime('%Y/%m/%d')} ---")
+    else:
+        print("--- 未设定最早登录时间或格式错误，不过滤 ---")
 
     zip_identifier = input("请输入压缩包命名标识 (默认: DJH): ").strip()
     if not zip_identifier:
@@ -558,7 +591,7 @@ async def main():
     print(f"职位: {target_position_str}")
     print(f"文件: {output_filename}")
     print(f"最早离职: {min_departure_str}")
-    print(f"最早登录: {earliest_login_date_str if earliest_login_date_str else '不过滤'}")
+    print(f"最早登录: {earliest_login_date.strftime('%Y/%m/%d') if earliest_login_date else '不过滤'}")
     final_briefing_display = briefing_template.replace('__COMPANY__', " 或 ".join([info['name'] for info in target_companies_info]))
     print(f"最终提纲预览: \n{final_briefing_display}")
     print("--- (程序将分别为每个公司进行精确搜索) ---")
@@ -686,18 +719,21 @@ async def main():
                                     if not match:
                                         raise ValueError("无法从文本中解析出YYYY/MM/DD格式的日期")
                                     
-                                    actual_login_date = match.group(1)
-                                    print(f"--- 提取到最后登录时间: {actual_login_date} ---")
+                                    actual_login_date_str = match.group(1)
+                                    # 将提取到的日期字符串转换为 datetime 对象
+                                    actual_login_date_dt = datetime.strptime(actual_login_date_str, "%Y/%m/%d")
+                                    
+                                    print(f"--- 提取到最后登录时间: {actual_login_date_str} ---")
         
-                                    if earliest_login_date_str:
-                                        if actual_login_date < earliest_login_date_str:
-                                            print(f"--- 登录时间不符: {actual_login_date} 早于要求的 {earliest_login_date_str}，跳过 ---")
+                                    if earliest_login_date:
+                                        if actual_login_date_dt < earliest_login_date:
+                                            print(f"--- 登录时间不符: {actual_login_date_str} 早于要求的 {earliest_login_date.strftime('%Y/%m/%d')}，跳过 ---")
                                             consecutive_failure_count += 1 # --- [!!! 新增: 失败计数 !!!] ---
                                             continue
                                         else:
                                             print(f"--- 登录时间符合，继续处理 ---")
                                 except Exception as e:
-                                    if earliest_login_date_str:
+                                    if earliest_login_date:
                                         print(f"--- 提取或判断 [最后登录时间] 失败: {e}，因已设置最早登录时间要求，跳过此人 ---")
                                         consecutive_failure_count += 1 # --- [!!! 新增: 失败计数 !!!] ---
                                         continue
@@ -921,7 +957,7 @@ async def main():
                                             "简历链接": profile_url,
                                             "Profile": summarized_profile, 
                                             "是否合作": "否",
-                                            "最后一次登录时间": actual_login_date
+                                            "最后一次登录时间": actual_login_date_str
                                         })
                                         qualified_resumes_count += 1
                                         current_company_qualified_count += 1
