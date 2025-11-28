@@ -413,6 +413,34 @@ def save_data_to_excel():
         print(f"--- (保存请求) 保存到 Excel 时出错: {e} ---")
 
 
+def clear_output_directories():
+    """
+    清空 data, resumes, zips 文件夹下的所有内容。
+    """
+    dirs_to_clear = ['data', 'resumes', 'zips']
+    print("\n--- 正在清空输出目录... ---")
+    
+    for directory in dirs_to_clear:
+        if os.path.exists(directory):
+            try:
+                # 遍历目录中的所有文件和子目录
+                for filename in os.listdir(directory):
+                    file_path = os.path.join(directory, filename)
+                    try:
+                        if os.path.isfile(file_path) or os.path.islink(file_path):
+                            os.unlink(file_path) # 删除文件或符号链接
+                        elif os.path.isdir(file_path):
+                            shutil.rmtree(file_path) # 删除子目录
+                    except Exception as e:
+                        print(f"删除 {file_path} 失败: {e}")
+                print(f"--- 已清空: {directory}/ ---")
+            except Exception as e:
+                print(f"--- 清空 {directory}/ 失败: {e} ---")
+        else:
+            print(f"--- 目录不存在，跳过: {directory}/ ---")
+    print("--- 清空完成 ---\n")
+
+
 # -------------------------------------------------------------------
 # 3. 主自动化流程
 # -------------------------------------------------------------------
@@ -424,6 +452,11 @@ async def main():
     update_login = input("是否需要重新登录/更新Cookie? (y/N): ").strip().lower()
     if update_login == 'y':
         await save_session()
+    
+    # --- 询问是否清空数据 ---
+    clear_data = input("是否清空 data, resumes, zips 文件夹下的所有内容? (y/N): ").strip().lower()
+    if clear_data == 'y':
+        clear_output_directories()
     
     # --- 1. 定义你的每日需求 ---
     print("\n--- 1. 定义你的每日需求 ---")
