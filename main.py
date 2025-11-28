@@ -26,7 +26,17 @@ from rich.prompt import Prompt, Confirm
 from rich import print as rprint
 
 # Add local libs to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'libs'))
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+sys.path.append(resource_path('libs'))
 
 from htmldocx import HtmlToDocx
 
@@ -337,6 +347,24 @@ def clear_output_directories():
         else: console.print(f"[dim]--- 目录不存在，跳过: {directory}/ ---[/dim]")
     console.print("[green]--- 清空完成 ---[/green]\n")
 
+def ensure_browsers_installed():
+    """Check if Playwright browsers are installed, if not, install them."""
+    console.print("[dim]正在检查浏览器环境...[/dim]")
+    try:
+        # Try to launch a browser to see if it works
+        import subprocess
+        # This is a simple check. A more robust way is to just run 'playwright install chromium'
+        # but that takes time. Let's try to run the install command only if needed.
+        # Actually, for a CLI tool, it's safer to just run 'playwright install chromium' 
+        # but we can suppress output if it's already installed.
+        # However, 'playwright install' checks itself.
+        
+        console.print("[dim]正在验证/安装 Chromium 浏览器... (首次运行可能需要几分钟)[/dim]")
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+        console.print("[green]浏览器环境检查通过。[/green]")
+    except Exception as e:
+        console.print(f"[yellow]警告: 浏览器安装检查失败 ({e})。如果程序运行报错，请手动运行 'playwright install'。[/yellow]")
+
 # --- Main Logic ---
 
 async def main():
@@ -344,6 +372,8 @@ async def main():
     
     # --- Setup ---
     console.rule("[bold blue]猎聘简历自动化助手[/bold blue]")
+    
+    ensure_browsers_installed()
     
     if Confirm.ask("是否需要重新登录/更新Cookie?"):
         await save_session()
