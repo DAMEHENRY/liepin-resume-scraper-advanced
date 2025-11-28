@@ -456,6 +456,7 @@ async def main():
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TextColumn("{task.completed}/{task.total}"),
+                TextColumn("[bold cyan]({task.fields[qualified]}/{task.fields[processed]})[/bold cyan]"), # Custom column for stats
                 TimeElapsedColumn(),
                 console=console
             ) as progress:
@@ -466,7 +467,13 @@ async def main():
                     current_company_qualified_count = 0
                     company_generated_files = []
                     
-                    task_id = progress.add_task(f"[cyan]处理公司: {target_company}", total=company_quota if company_quota != float('inf') else 100)
+                    # Initialize task with custom fields
+                    task_id = progress.add_task(
+                        f"[cyan]处理公司: {target_company}", 
+                        total=company_quota if company_quota != float('inf') else 100,
+                        qualified=0,
+                        processed=0
+                    )
                     
                     briefing_text = briefing_template.replace('__COMPANY__', target_company)
                     
@@ -522,10 +529,12 @@ async def main():
                                         
                                         if earliest_login_date and actual_login_date_dt < earliest_login_date:
                                             consecutive_failure_count += 1
+                                            progress.update(task_id, processed=processed_resumes_count)
                                             continue
                                     except Exception:
                                         if earliest_login_date:
                                             consecutive_failure_count += 1
+                                            progress.update(task_id, processed=processed_resumes_count)
                                             continue
 
                                     # 2. Work Time
@@ -535,6 +544,7 @@ async def main():
                                         work_time = format_work_time(raw_work_time)
                                         if not is_departure_date_ok(work_time, min_departure_str):
                                             consecutive_failure_count += 1
+                                            progress.update(task_id, processed=processed_resumes_count)
                                             continue
                                     except Exception: continue
 
@@ -542,6 +552,7 @@ async def main():
                                     cv_text = await profile_page.locator(CV_TEXT_SELECTOR).text_content(timeout=5000)
                                     if not is_match_volc(cv_text, briefing_text):
                                         consecutive_failure_count += 1
+                                        progress.update(task_id, processed=processed_resumes_count)
                                         continue
                                     
                                     # 4. Company
@@ -549,6 +560,7 @@ async def main():
                                     company = await profile_page.locator(company_selector).first.text_content(timeout=5000)
                                     if target_company.lower() not in company.lower():
                                         consecutive_failure_count += 1
+                                        progress.update(task_id, processed=processed_resumes_count)
                                         continue
                                     
                                     # Success
@@ -602,7 +614,7 @@ async def main():
                                         company_generated_files.append(docx_filename)
                                     
                                     consecutive_failure_count = 0
-                                    progress.update(task_id, advance=1)
+                                    progress.update(task_id, advance=1, qualified=qualified_resumes_count, processed=processed_resumes_count)
                                     
                                     if current_company_qualified_count >= company_quota:
                                         break
