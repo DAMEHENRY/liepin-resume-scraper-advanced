@@ -986,7 +986,7 @@ async def main():
                 # --- 公司循环结束后的打包逻辑 ---
                 if company_generated_files:
                     # --- [!!! 修改: 存入 zips 目录 !!!] ---
-                    zip_filename = os.path.join('zips', f"猎聘-{len(company_generated_files)}份-{zip_identifier}.zip")
+                    zip_filename = os.path.join('zips', f"猎聘-{target_company}-{len(company_generated_files)}份-{zip_identifier}.zip")
                     zip_counter = 1
                     base_zip_name = zip_filename.replace(".zip", "")
                     while os.path.exists(zip_filename):
