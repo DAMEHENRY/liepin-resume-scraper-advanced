@@ -893,7 +893,7 @@ async def main():
                                     try:
                                         full_html = await profile_page.content()
                                         
-                                        base_filename = f"猎聘-{clean_name}"
+                                        base_filename = f"{qualified_resumes_count}-猎聘-{clean_name}"
                                         # --- [!!! 修改: 存入 resumes 目录 !!!] ---
                                         docx_filename = os.path.join('resumes', f"{base_filename}.docx")
                                         
