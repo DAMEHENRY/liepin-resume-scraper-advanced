@@ -511,6 +511,10 @@ async def main():
         print("--- 未输入最早离职年限，默认不过滤 ---")
 
     earliest_login_date_str = input("请输入最早的最后一次登录时间 (格式: YYYY/MM/DD，可留空): ").strip()
+
+    zip_identifier = input("请输入压缩包命名标识 (默认: DJH): ").strip()
+    if not zip_identifier:
+        zip_identifier = "DJH"
     
     print("\n--- 配置确认 ---")
     print(f"分类: {category}")
@@ -982,7 +986,7 @@ async def main():
                 # --- 公司循环结束后的打包逻辑 ---
                 if company_generated_files:
                     # --- [!!! 修改: 存入 zips 目录 !!!] ---
-                    zip_filename = os.path.join('zips', f"猎聘-{len(company_generated_files)}份-DJH.zip")
+                    zip_filename = os.path.join('zips', f"猎聘-{len(company_generated_files)}份-{zip_identifier}.zip")
                     zip_counter = 1
                     base_zip_name = zip_filename.replace(".zip", "")
                     while os.path.exists(zip_filename):
