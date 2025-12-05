@@ -347,6 +347,69 @@ def clear_output_directories():
         else: console.print(f"[dim]--- 目录不存在，跳过: {directory}/ ---[/dim]")
     console.print("[green]--- 清空完成 ---[/green]\n")
 
+def archive_output_directories():
+    """Moves existing files in data, resumes, zips to a timestamped archive folder."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_name = f"archive_{timestamp}"
+    dirs_to_archive = ['data', 'resumes', 'zips']
+    
+    console.print(f"\n[yellow]--- 正在归档旧文件到 {archive_name}... ---[/yellow]")
+    
+    for directory in dirs_to_archive:
+        if not os.path.exists(directory): continue
+        
+        # Create specific archive subfolder, e.g., data/archive_2023.../
+        archive_path = os.path.join(directory, archive_name)
+        if not os.path.exists(archive_path): os.makedirs(archive_path)
+        
+        try:
+            for filename in os.listdir(directory):
+                file_path = os.path.join(directory, filename)
+                # Skip the archive folder itself
+                if filename == archive_name: continue
+                
+                # Move file or directory
+                shutil.move(file_path, os.path.join(archive_path, filename))
+            console.print(f"[green]--- 已归档 {directory}/ 内容 ---[/green]")
+        except Exception as e:
+            console.print(f"[red]--- 归档 {directory}/ 失败: {e} ---[/red]")
+    console.print("[green]--- 归档完成 ---[/green]\n")
+
+def load_historical_data():
+    """Loads all historical candidate data from xlsx files in 'data' directory (recursive)."""
+    console.print("[dim]正在加载历史数据以进行查重...[/dim]")
+    seen_candidates = set()
+    data_dir = 'data'
+    
+    if not os.path.exists(data_dir): return seen_candidates
+    
+    xlsx_files = []
+    for root, dirs, files in os.walk(data_dir):
+        for file in files:
+            if file.endswith(".xlsx") and not file.startswith("~$"): # Ignore temp files
+                xlsx_files.append(os.path.join(root, file))
+    
+    for file_path in xlsx_files:
+        try:
+            df = pd.read_excel(file_path)
+            # Ensure required columns exist
+            required_cols = ['姓名', '职位', '在职时间']
+            if all(col in df.columns for col in required_cols):
+                for _, row in df.iterrows():
+                    # Create a tuple signature for the candidate
+                    # Using str() to ensure consistent types
+                    signature = (
+                        str(row['姓名']).strip(),
+                        str(row['职位']).strip(),
+                        str(row['在职时间']).strip()
+                    )
+                    seen_candidates.add(signature)
+        except Exception as e:
+            console.print(f"[yellow]读取历史文件失败 {os.path.basename(file_path)}: {e}[/yellow]")
+            
+    console.print(f"[green]已加载 {len(seen_candidates)} 条历史记录用于查重。[/green]")
+    return seen_candidates
+
 def ensure_browsers_installed():
     """Check if Playwright browsers are installed, if not, install them."""
     console.print("[dim]正在检查浏览器环境...[/dim]")
@@ -378,8 +441,13 @@ async def main():
     if Confirm.ask("是否需要重新登录/更新Cookie?"):
         await save_session()
     
-    if Confirm.ask("是否清空 data, resumes, zips 文件夹下的所有内容?"):
+    if Confirm.ask("是否清空 data, resumes, zips 文件夹下的所有内容? (y=清空, n=归档)"):
         clear_output_directories()
+    else:
+        archive_output_directories()
+        
+    # Load historical data for deduplication
+    seen_candidates = load_historical_data()
     
     # --- Input Phase with Backtracking ---
     im = InputManager()
@@ -610,6 +678,18 @@ async def main():
                                         clean_name += f"{gender}士" if gender == "女" else "先生"
                                     
                                     title = await profile_page.locator('div.position-name, .work-position, .position-text, .position-title, .contact-position, h6.job-name').first.text_content(timeout=5000)
+                                    
+                                    # --- Deduplication Check ---
+                                    candidate_signature = (clean_name.strip(), title.strip(), work_time.strip())
+                                    if candidate_signature in seen_candidates:
+                                        console.print(f"[yellow]发现重复候选人: {clean_name} - {title}，跳过。[/yellow]")
+                                        consecutive_failure_count += 1 # Treat duplicate as failure to trigger early stopping if too many
+                                        progress.update(task_id, processed=processed_resumes_count)
+                                        continue
+                                    
+                                    # Add to seen set to prevent duplicates within the same run
+                                    seen_candidates.add(candidate_signature)
+                                    # ---------------------------
                                     
                                     contact_info = "未查看"
                                     if should_view_phone:

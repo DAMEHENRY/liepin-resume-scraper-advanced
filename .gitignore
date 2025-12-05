@@ -13,3 +13,7 @@ zips/
 
 # Virtual Environment
 .venv/
+
+# Excel & Numbers
+*.xlsx
+*.numbers
