@@ -17,3 +17,6 @@ zips/
 # Excel & Numbers
 *.xlsx
 *.numbers
+
+# Secrets
+.env
