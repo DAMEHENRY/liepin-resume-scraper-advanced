@@ -48,7 +48,7 @@ from htmldocx import HtmlToDocx
 # --- Configuration & Constants ---
 VOLC_SECRETKEY = os.getenv("VOLC_SECRETKEY")
 RESUME_LINK_SELECTOR = "div.new-resume-personal-name"
-CV_TEXT_SELECTOR = ".G0UQv"
+CV_TEXT_SELECTOR = "#resume-detail-single"
 
 console = Console()
 
@@ -568,10 +568,23 @@ class LiepinScraper:
                                         
                                         # 1. Login Date
                                         earliest_login_date = parse_login_date_input(self.config['earliest_login'])
+                                        actual_login_date_str = "未知"
                                         try:
-                                            last_login_text = await profile_page.locator("#resume-detail-single > div.Y9hQO > div > div.ant-tabs-nav > div.ant-tabs-extra-content > div > span:nth-child(3)").text_content(timeout=5000)
-                                            match = re.search(r'(\d{4}/\d{2}/\d{2})', last_login_text)
+                                            # 尝试使用更通用的选择器 (Ant Design Tab Extra Content)
+                                            login_area_text = await profile_page.locator("#resume-detail-single .ant-tabs-extra-content").text_content(timeout=3000)
+                                            match = re.search(r'(\d{4}/\d{2}/\d{2})', login_area_text)
+                                            
+                                            # 如果上面的失败，尝试在整个头部区域搜索日期模式
+                                            if not match:
+                                                header_text = await profile_page.locator("#resume-detail-single").text_content(timeout=3000)
+                                                # 搜索 "登录" 附近的日期，或者直接搜索日期格式 (假设最近的日期是登录时间)
+                                                # 这里假设登录时间通常在顶部，且格式为 YYYY/MM/DD
+                                                match = re.search(r'最后登录.*?(\d{4}/\d{2}/\d{2})', header_text)
+                                                if not match:
+                                                    match = re.search(r'(\d{4}/\d{2}/\d{2})', header_text)
+
                                             if not match: raise ValueError("无法解析日期")
+                                            
                                             actual_login_date_str = match.group(1)
                                             actual_login_date_dt = datetime.strptime(actual_login_date_str, "%Y/%m/%d")
                                             
