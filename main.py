@@ -95,6 +95,14 @@ def format_work_time(time_str: str) -> str:
         return cleaned_str
     except Exception: return time_str
 
+def extract_name_first_char(name: str) -> str:
+    """提取姓名的第一个字符用于查重匹配"""
+    if not name:
+        return ""
+    # 移除常见后缀后提取第一个字符
+    clean = name.strip().replace("*", "").replace("先生", "").replace("女士", "")
+    return clean[0] if clean else ""
+
 def format_name_to_initials(full_name: str, gender: str) -> str:
     if not full_name: return ""
     surname = full_name[0]
@@ -380,7 +388,7 @@ class LiepinScraper:
                 if all(col in df.columns for col in required_cols):
                     for _, row in df.iterrows():
                         signature = (
-                            str(row['姓名']).strip(),
+                            extract_name_first_char(str(row['姓名'])),
                             str(row['职位']).strip(),
                             str(row['在职时间']).strip()
                         )
@@ -628,7 +636,7 @@ class LiepinScraper:
                                         title = await profile_page.locator('div.position-name, .work-position, .position-text, .position-title, .contact-position, h6.job-name').first.text_content(timeout=5000)
                                         
                                         # --- Deduplication Check (Moved Before AI) ---
-                                        candidate_signature = (clean_name.strip(), title.strip(), work_time.strip())
+                                        candidate_signature = (extract_name_first_char(clean_name), title.strip(), work_time.strip())
                                         if candidate_signature in self.seen_candidates:
                                             console.print(f"[yellow]发现重复候选人: {clean_name} - {title}，跳过 (节省AI额度)。[/yellow]")
                                             consecutive_failure_count += 1 
