@@ -138,6 +138,95 @@ This tool automatically searches for candidates, analyzes their resumes against 
 - `resumes/`: 存放下载的个人简历 Word 文档。
 - `zips/`: 存放按公司打包好的简历压缩包。
 
+### 逻辑流程图 / Logic Flowchart
+```mermaid
+flowchart TD
+    %% Initialization Phase
+    Start([Start]) --> Init[Initialize LiepinScraper]
+    Init --> StartListener[Start Keyboard Listener]
+    StartListener --> BrowserCheck[Ensure Browsers Installed]
+    
+    %% User Configuration Phase
+    BrowserCheck --> LoginQuery{Update Cookie/Login?}
+    LoginQuery -- Yes --> Login[save_session: Manual Login & Save state.json]
+    LoginQuery -- No --> ClearQuery{Clear Output Dirs?}
+    Login --> ClearQuery
+    
+    ClearQuery -- Yes --> Clear[clear_output_directories]
+    ClearQuery -- No --> Archive[archive_output_directories]
+    
+    Clear --> LoadHistory[load_historical_data: Load local Excel files]
+    Archive --> LoadHistory
+    
+    LoadHistory --> GetInputs[get_user_inputs: Category, Companies, Positions]
+    
+    %% Main Scraper Logic
+    GetInputs --> RunScraper[run_scraper]
+    RunScraper --> CompanyLoop{For each Target Company}
+    
+    CompanyLoop -- Next Company --> PositionLoop{For each Position}
+    CompanyLoop -- All Done --> SaveExcel[save_data_to_excel]
+    
+    PositionLoop -- Next Position --> Search[Search Liepin: Company + Position]
+    PositionLoop -- All Done --> ZipFiles[zip_company_files]
+    ZipFiles --> CompanyLoop
+    
+    Search --> PageLoop{For each Page}
+    PageLoop -- Next Page --> CandidateLoop{For each Candidate Link}
+    PageLoop -- No More Pages --> PositionLoop
+    
+    CandidateLoop -- Next Candidate --> PauseCheck{Paused?}
+    CandidateLoop -- No More Candidates --> PageLoop
+    
+    PauseCheck -- Yes --> Wait[Wait...] 
+    Wait --> PauseCheck
+    PauseCheck -- No --> OpenResume[Open Resume Page]
+    
+    %% Validation Chain
+    OpenResume --> CheckLoginDate{Login Date OK?}
+    CheckLoginDate -- No --> CountFail[FailCount++]
+    CheckLoginDate -- Yes --> CheckWorkTime{Departure Date OK?}
+    
+    CheckWorkTime -- No --> CountFail
+    CheckWorkTime -- Yes --> ExtractInfo[Extract Name, Title, Gender]
+    
+    ExtractInfo --> CheckDuplicate{Is Duplicate?}
+    CheckDuplicate -- Yes --> CountFail
+    CheckDuplicate -- No --> AICheck{AI Match Briefing?}
+    
+    AICheck -- No --> CountFail
+    AICheck -- Yes --> CheckCompanyMatch{Current Company Match?}
+    
+    CheckCompanyMatch -- No --> CountFail
+    CheckCompanyMatch -- Yes --> ProcessSuccess[Process Qualified Candidate]
+    
+    CountFail --> NextCandidate[Continue to Next Candidate]
+    NextCandidate --> CandidateLoop
+    
+    %% Success Path
+    ProcessSuccess --> AISummary[AI Summarize Profile]
+    AISummary --> SaveData[Add to Memory saved_contacts]
+    SaveData --> SaveDocx[save_resume_as_docx]
+    SaveDocx --> CheckQuota{Company Quota Met?}
+    
+    CheckQuota -- Yes --> StopPosition[Break Position Loop]
+    StopPosition --> ZipFiles
+    CheckQuota -- No --> ResetFail[Reset FailCount]
+    ResetFail --> NextCandidate
+    
+    %% Finalization
+    SaveExcel --> RestartQuery{Start New Round?}
+    RestartQuery -- Yes --> LoginQuery
+    RestartQuery -- No --> End([End])
+    
+    %% Styling
+    style Start fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
+    style End fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
+    style ProcessSuccess fill:#bbdefb,stroke:#1976d2,stroke-width:2px
+    style SaveData fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style CountFail fill:#ffccbc,stroke:#d84315,stroke-width:2px
+```
+
 ---
 
 ### Disclaimer / 免责声明
