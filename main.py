@@ -475,7 +475,7 @@ class LiepinScraper:
             
             df = pd.DataFrame(list(self.saved_contacts))
             if not df.empty:
-                desired_order = ['分类', '公司', '职位', '在职公司', '在职时间', '云号码', '简历链接', 'Profile', '姓名', '是否合作', '最后一次登录时间']
+                desired_order = ['分类', '公司', '姓名', '在职公司', '职位', '云号码', '在职时间', 'Profile', '简历链接', '是否合作', '最后一次登录时间']
                 cols_in_order = [col for col in desired_order if col in df.columns]
                 df = df[cols_in_order]
                 df.insert(0, '序号', range(1, 1 + len(df)))
