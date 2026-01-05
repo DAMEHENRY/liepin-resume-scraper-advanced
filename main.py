@@ -399,10 +399,41 @@ class LiepinScraper:
         console.print(f"[green]已加载 {len(self.seen_candidates)} 条历史记录用于查重。[/green]")
 
     def get_user_inputs(self):
+        # 1. 基础信息预收集 (为了生成默认文件名)
+        category = Prompt.ask("[bold cyan]请输入分类 (例如: 上游/下游)[/bold cyan]")
+        companies_str = Prompt.ask("[bold cyan]请输入公司和配额，用'/'分隔 (格式: 公司A 10/公司B 5)[/bold cyan]")
+        positions_str = Prompt.ask("[bold cyan]请输入目标职位 (例如: 产品经理-数据分析师)[/bold cyan]", default="")
+
+        # 解析公司和职位
+        target_companies_info = []
+        for entry in companies_str.split('/'):
+            if not entry.strip(): continue
+            parts = entry.strip().rsplit(' ', 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                target_companies_info.append({'name': parts[0].strip(), 'quota': int(parts[1])})
+            else:
+                target_companies_info.append({'name': entry.strip(), 'quota': float('inf')})
+        
+        target_positions = [p.strip() for p in positions_str.split('-') if p.strip()]
+        
+        # 构造默认文件名
+        comp_names = "-".join([c['name'] for c in target_companies_info])
+        pos_names = "-".join(target_positions)
+        default_name = f"{category}-{comp_names}"
+        if pos_names:
+            default_name += f"-{pos_names}"
+        default_name += ".xlsx"
+
+        # 2. 其余交互使用 InputManager (为了支持 back 功能)
         im = InputManager()
-        im.add_step('category', "请输入分类 (例如: 上游/下游)", required=True)
-        im.add_step('companies', "请输入公司和配额，用'/'分隔 (格式: 公司A 10/公司B 5)", required=True)
-        im.add_step('positions', "请输入目标职位 (例如: 产品经理/数据分析师)", default="")
+        # 将已输入的值存入 data，这样 InputManager 运行到这些步骤时会显示默认值为刚输入的内容
+        im.data['category'] = category
+        im.data['companies'] = companies_str
+        im.data['positions'] = positions_str
+        
+        im.add_step('category', "确认分类", default=category)
+        im.add_step('companies', "确认公司配额", default=companies_str)
+        im.add_step('positions', "确认目标职位 (用'-'分隔)", default=positions_str)
         
         def process_briefing(val):
             return "DEFAULT" if val.lower() == 'y' else "CUSTOM"
@@ -410,28 +441,27 @@ class LiepinScraper:
         im.add_step('use_default_briefing', "是否使用建议提纲? (Y/n)", default='y', processor=process_briefing)
         im.add_step('view_phone', "是否需要查看联系方式? (y/N)", default='n')
         im.add_step('format_name', "姓名是否只保留首字母缩写? (y/N)", default='n')
-        im.add_step('filename', "请输入输出文件名", default="output.xlsx")
+        im.add_step('filename', "请输入输出文件名", default=default_name)
         im.add_step('min_departure', "离职年限不早于 (格式: YY/M 或 'Present')", default="Present")
         im.add_step('earliest_login', "最后一次登陆时间不晚于 (格式: YY/M)", default="")
         im.add_step('zip_id', "请输入压缩包命名标识", default="ZTZ")
         
         self.config = im.run()
         
-        # Process inputs
+        # 重新同步处理后的数据 (处理 InputManager 可能的修改)
         self.target_companies_info = []
-        if self.config['companies']:
-            for entry in self.config['companies'].split('/'):
-                if not entry.strip(): continue
-                parts = entry.strip().rsplit(' ', 1)
-                if len(parts) == 2 and parts[1].isdigit():
-                    self.target_companies_info.append({'name': parts[0].strip(), 'quota': int(parts[1])})
-                else:
-                    self.target_companies_info.append({'name': entry.strip(), 'quota': float('inf')})
+        for entry in self.config['companies'].split('/'):
+            if not entry.strip(): continue
+            parts = entry.strip().rsplit(' ', 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                self.target_companies_info.append({'name': parts[0].strip(), 'quota': int(parts[1])})
+            else:
+                self.target_companies_info.append({'name': entry.strip(), 'quota': float('inf')})
         
-        self.target_positions = [p.strip() for p in self.config['positions'].split('/') if p.strip()]
+        self.target_positions = [p.strip() for p in self.config['positions'].split('-') if p.strip()]
         
         # Briefing
-        target_position_str = "/".join(self.target_positions)
+        target_position_str = "-".join(self.target_positions)
         all_companies_str = " 或 ".join([info['name'] for info in self.target_companies_info])
         default_briefing = f"""
         访谈提纲核心要求：
