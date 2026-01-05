@@ -16,11 +16,12 @@ This tool automatically searches for candidates, analyzes their resumes against 
 - **🤖 AI-Powered Screening**: Uses Volcengine (Doubao) API to verify if a candidate matches your job description (YES/NO) and generates a concise profile summary.
 - **📄 Format Conversion**: Automatically saves web resumes as formatted `.docx` files (removing ads and broken images).
 - **📦 Smart Archiving**: Bundles resumes into ZIP files by company and quota.
-- **📊 Excel Reporting**: Generates a comprehensive `.xlsx` report with candidate details, AI summaries, and contact status.
+- **📊 Excel Reporting**: Generates a comprehensive `.xlsx` report with a optimized column order (Category, Company, Name, current Company, Position, etc.).
 - **⚡️ Efficiency**: 
     - **Deduplication**: Checks local history to avoid re-processing or paying for the same candidate twice.
     - **Early Stopping**: Automatically skips irrelevant positions after consecutive failures.
     - **Resume Mode**: Supports resuming session cookies to avoid frequent logins.
+    - **Automatic Naming**: Excel files are automatically named based on your inputs and dynamically updated to reflect only the actual positions searched.
 - **💻 CLI Interface**: Beautiful terminal UI with progress bars, color-coded logs, and interactive configuration.
 
 ### Prerequisites
@@ -62,7 +63,8 @@ This tool automatically searches for candidates, analyzes their resumes against 
 
 3. **Follow the CLI prompts** to set:
    - Target Companies (e.g., `Google 10/Microsoft 5`)
-   - Target Positions
+   - Target Positions (Use `-` as separator, e.g., `Product-Research`)
+   - Output Filename (Default: `Category-Company-Position.xlsx`)
    - Resume Filters (Age, Last Login, etc.)
 
 ### Output Structure
@@ -84,11 +86,12 @@ This tool automatically searches for candidates, analyzes their resumes against 
 - **🤖 AI 智能初筛**: 调用火山引擎 API，根据您的“访谈提纲”自动判断候选人是否匹配 (YES/NO)，并生成一句话画像总结。
 - **📄 格式清洗与转换**: 将网页版简历自动保存为排版整洁的 `.docx` 文档，自动移除广告和无效图片。
 - **📦 智能打包**: 按目标公司将下载的简历自动打包为 ZIP 文件，方便归档。
-- **📊 数据报表**: 自动生成包含候选人姓名、职位、AI 评价、原文链接等信息的 Excel 表格。
+- **📊 数据报表**: 自动生成结构优化的 Excel 表格，列顺序已针对阅读习惯进行优化。
 - **⚡️ 高效策略**: 
     - **自动去重**: 启动时加载历史数据，避免重复抓取或浪费 AI token。
     - **早停机制**: 连续 N 次不匹配自动跳过当前搜索条件，节省时间。
     - **断点续传**: 支持保存登录状态 (Cookie)，无需每次运行都扫码登录。
+    - **自动化命名**: Excel 文件根据搜集目标自动生成文件名，并随搜索进度动态调整，确保文件名反映真实内容。
 - **💻 交互式终端**: 基于 Rich 库开发的精美 CLI 界面，支持进度条、彩色日志和交互式配置。
 
 ### 环境要求
@@ -130,7 +133,8 @@ This tool automatically searches for candidates, analyzes their resumes against 
 
 3. **按提示输入配置:**
    - 输入目标公司及配额 (如: `腾讯 10/阿里 5`)
-   - 输入目标职位 (如: `产品经理/数据分析师`)
+   - 输入目标职位 (使用 `-` 分隔，如: `产品经理-数据分析师`)
+   - 输出文件名 (默认: `分类-公司-职位.xlsx`，可直接回车确认)
    - 设置筛选条件 (离职时间、最后登录时间等)
 
 ### 输出文件说明
