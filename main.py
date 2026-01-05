@@ -402,7 +402,7 @@ class LiepinScraper:
         im = InputManager()
         im.add_step('category', "请输入分类 (例如: 上游/下游)", required=True)
         im.add_step('companies', "请输入公司和配额，用'/'分隔 (格式: 公司A 10/公司B 5)", required=True)
-        im.add_step('positions', "请输入目标职位 (例如: 产品经理/数据分析师)", default="产品经理")
+        im.add_step('positions', "请输入目标职位 (例如: 产品经理/数据分析师)", default="")
         
         def process_briefing(val):
             return "DEFAULT" if val.lower() == 'y' else "CUSTOM"
