@@ -306,6 +306,9 @@ class LiepinScraper:
         self.target_companies_info = []
         self.target_positions = []
         self.briefing_template = ""
+        self.is_default_filename = False
+        self.actually_searched_positions = []
+        self.base_default_filename = "" # 分类-公司名 部分
         
     def ensure_browsers_installed(self):
         console.print("[dim]正在检查浏览器环境...[/dim]")
@@ -418,8 +421,9 @@ class LiepinScraper:
         
         # 构造默认文件名
         comp_names = "-".join([c['name'] for c in target_companies_info])
+        self.base_default_filename = f"{category}-{comp_names}"
         pos_names = "-".join(target_positions)
-        default_name = f"{category}-{comp_names}"
+        default_name = self.base_default_filename
         if pos_names:
             default_name += f"-{pos_names}"
         default_name += ".xlsx"
@@ -447,6 +451,10 @@ class LiepinScraper:
         im.add_step('zip_id', "请输入压缩包命名标识", default="ZTZ")
         
         self.config = im.run()
+        
+        # 记录是否使用的是默认生成的名称
+        if self.config['filename'] == default_name:
+            self.is_default_filename = True
         
         # 重新同步处理后的数据 (处理 InputManager 可能的修改)
         self.target_companies_info = []
@@ -497,7 +505,19 @@ class LiepinScraper:
         console.print(table)
 
     def save_data_to_excel(self):
-        console.print("\n[cyan]--- 收到保存请求，正在保存当前数据... ---[/cyan]")
+        if self.is_default_filename and self.actually_searched_positions:
+            pos_part = "-".join(self.actually_searched_positions)
+            new_filename = f"{self.base_default_filename}-{pos_part}.xlsx"
+            new_full_path = os.path.join('data', new_filename)
+            
+            if new_full_path != self.output_filename:
+                # 如果旧文件存在，稍后删除
+                old_path = self.output_filename
+                self.output_filename = new_full_path
+                if os.path.exists(old_path):
+                    try: os.remove(old_path)
+                    except: pass
+
         with self.contacts_lock:
             if not self.output_filename or not self.saved_contacts:
                 console.print("[yellow]--- (保存请求) 没有数据或文件名未设置 ---[/yellow]")
@@ -565,6 +585,9 @@ class LiepinScraper:
                         for current_position in self.target_positions:
                             if current_company_qualified_count >= company_quota: break
                             
+                            if current_position not in self.actually_searched_positions:
+                                self.actually_searched_positions.append(current_position)
+
                             console.print(f"\n[dim]正在搜索职位: {current_position}[/dim]")
                             await page.goto("https://h.liepin.com/search/getConditionItem")
                             
