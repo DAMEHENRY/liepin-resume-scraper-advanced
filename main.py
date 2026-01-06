@@ -405,7 +405,7 @@ class LiepinScraper:
         # 1. 基础信息预收集 (为了生成默认文件名)
         category = Prompt.ask("[bold cyan]请输入分类 (例如: 上游/下游)[/bold cyan]")
         companies_str = Prompt.ask("[bold cyan]请输入公司和配额，用'/'分隔 (格式: 公司A 10/公司B 5)[/bold cyan]")
-        positions_str = Prompt.ask("[bold cyan]请输入目标职位 (例如: 产品经理-数据分析师)[/bold cyan]", default="")
+        positions_str = Prompt.ask("[bold cyan]请输入目标职位 (例如: 产品经理-数据分析师)[/bold cyan]", default="", show_default=False)
 
         # 解析公司和职位
         target_companies_info = []
