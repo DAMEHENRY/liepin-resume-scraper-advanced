@@ -771,12 +771,15 @@ class LiepinScraper:
                                 
                                 if current_company_qualified_count >= company_quota: break
                                 
-                                next_btn = page.locator("#resultList > div.table-box > table > tfoot > tr > td:nth-child(2) > ul > li.ant-pagination-next > button")
-                                if await next_btn.count() > 0 and not await page.locator("li.ant-pagination-next.ant-pagination-disabled").count() > 0:
+                                # Use simplified selector (tested and verified)
+                                next_btn = page.locator("li.ant-pagination-next:not(.ant-pagination-disabled) button")
+                                if await next_btn.count() > 0:
                                     await next_btn.click()
                                     await page.wait_for_load_state('networkidle')
                                     page_number += 1
-                                else: break
+                                else:
+                                    break
+
                         
                         if company_generated_files:
                             zip_identifier = self.config['zip_id']
