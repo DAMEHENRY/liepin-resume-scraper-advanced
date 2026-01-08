@@ -30,7 +30,7 @@ pip install pyinstaller rich playwright pandas openpyxl python-docx beautifulsou
 3.  Install Python and dependencies (same as above).
 4.  Run the following command:
     ```cmd
-    pyinstaller --noconfirm --onefile --console --name "LiepinScraper" --add-data "libs;libs" --hidden-import "rich" main.py
+    pyinstaller --noconfirm --onefile --console --name "LiepinScraper" --add-data "libs;libs" --hidden-import "rich" --hidden-import "rich.live" --hidden-import "rich.progress" --hidden-import "rich.console" --hidden-import "rich.panel" --hidden-import "rich.table" --hidden-import "rich.prompt" --hidden-import "pynput.keyboard" --hidden-import "openpyxl" main.py
     ```
     *(Note the semicolon `;` in `--add-data "libs;libs"` which is specific to Windows)*
 5.  The `LiepinScraper.exe` will be found in the `dist` folder.

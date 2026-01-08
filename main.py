@@ -582,16 +582,21 @@ class LiepinScraper:
                         
                         briefing_text = self.briefing_template.replace('__COMPANY__', target_company)
                         
-                        for current_position in self.target_positions:
+                        # Fix: Handle empty position list - default to [""] to search all candidates
+                        positions_to_search = self.target_positions if self.target_positions else [""]
+                        
+                        for current_position in positions_to_search:
                             if current_company_qualified_count >= company_quota: break
+                            
+                            # Fix: Reset early stopping counter for each new position
+                            consecutive_failure_count = 0
                             
                             if current_position not in self.actually_searched_positions:
                                 self.actually_searched_positions.append(current_position)
 
-                            console.print(f"\n[dim]正在搜索职位: {current_position}[/dim]")
+                            position_display = current_position if current_position else "[所有职位]"
+                            console.print(f"\n[dim]正在搜索职位: {position_display}[/dim]")
                             await page.goto("https://h.liepin.com/search/getConditionItem")
-                            
-                            consecutive_failure_count = 0
                             await page.fill('input#rc_select_1, input.search-input, input.company-position-input, .search-box, .search-input', f"{target_company} {current_position}")
                             await page.click('button:has-text("搜 索"), button:has-text("搜索"), .search-btn, .submit-btn')
                             

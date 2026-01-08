@@ -19,6 +19,9 @@ pyinstaller --noconfirm --onefile --console --name "LiepinScraper" \
     --hidden-import "rich.panel" \
     --hidden-import "rich.table" \
     --hidden-import "rich.prompt" \
+    --hidden-import "pynput.keyboard._darwin" \
+    --hidden-import "pynput.keyboard" \
+    --hidden-import "openpyxl" \
     main.py
 
 echo "Build Complete!"
