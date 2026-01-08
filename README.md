@@ -28,7 +28,7 @@
 
 ### Installation
 
-#### 1. From Source (All Platforms: Windows, Mac, Linux)
+#### From Source (All Platforms: Windows, Mac, Linux)
 Ensure you have **Python 3.8+** installed.
 
 1.  **Clone & Enter:**
@@ -50,17 +50,8 @@ Ensure you have **Python 3.8+** installed.
     VOLC_SECRETKEY=your_actual_api_key_here
     ```
 
-#### 2. Standalone Executable (No Python Required)
--   **Mac**: 
-    - Run `sh build_mac.sh` to generate `dist/LiepinScraper`.
-    - Or download the pre-built binary if available.
--   **Windows**: 
-    - Use PyInstaller: `pyinstaller --noconfirm --onefile --console --name "LiepinScraper" --add-data "libs;libs" --hidden-import "rich" main.py`.
-    - Find `LiepinScraper.exe` in the `dist` folder.
--   **Linux**: Recommended to run via source (Step 1).
-
 ### Usage
-1.  **Run**: `python main.py` (or double-click the executable).
+1.  **Run**: `python main.py`
 2.  **Login**: On first run, a browser opens for manual login. Session is saved to `state.json`.
 3.  **Configure**: Follow CLI prompts to set Category, Companies (e.g., `Google 10/MS 5`), and Keywords (e.g., `Product-Data`).
 4.  **Monitor**: View real-time progress in the terminal.
@@ -91,7 +82,7 @@ Ensure you have **Python 3.8+** installed.
 
 ### 安装步骤
 
-#### 1. 源码安装 (通用: Windows, Mac, Linux)
+#### 源码安装 (通用: Windows, Mac, Linux)
 需提前安装 **Python 3.8+**。
 
 1.  **克隆项目:**
@@ -110,19 +101,11 @@ Ensure you have **Python 3.8+** installed.
 4.  **配置环境变量:**
     在根目录创建 `.env` 文件并填入：
     ```env
-    VOLC_SECRETKEY=您的火山引擎API密钥
+    VOLC_SECRETKEY=您的火山引擎 API密钥
     ```
 
-#### 2. 独立运行程序 (无需 Python)
--   **Mac 系统**: 
-    - 运行 `sh build_mac.sh` 即可在 `dist/` 目录下生成 `LiepinScraper` 可执行文件。
--   **Windows 系统**: 
-    - 使用 PyInstaller 打包：`pyinstaller --noconfirm --onefile --console --name "LiepinScraper" --add-data "libs;libs" --hidden-import "rich" main.py`。
-    - 生成的 `LiepinScraper.exe` 位于 `dist` 目录。
--   **Linux 系统**: 建议通过源码方式运行。
-
 ### 使用说明
-1.  **启动**: `python main.py` 或双击可执行文件。
+1.  **启动**: `python main.py`
 2.  **登录**: 首次运行需在弹出的浏览器中手动扫码登录，状态将存入 `state.json` 以供后续免登录使用。
 3.  **交互配置**: 按提示输入分类、公司及目标份数（如：`腾讯 10/阿里 5`）、搜索关键词（如：`产品经理-数据分析`）。
 4.  **获取结果**: 任务完成后，在 `data/` (Excel), `resumes/` (Word), `zips/` (压缩包) 查看结果。
