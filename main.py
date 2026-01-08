@@ -141,11 +141,12 @@ def zip_company_files(company_name: str, file_paths: List[str], output_zip_name:
     except Exception as e: console.print(f"[red]打包Zip失败: {e}[/red]")
 
 # --- AI Functions ---
-def is_match_volc(cv_text: str, briefing: str) -> bool:
+def is_match_volc(cv_text: str, briefing: str, max_retries: int = 3) -> Optional[bool]:
+    """判断简历是否匹配，返回 True/False/None (None表示API错误)"""
     api_key = VOLC_SECRETKEY
     if not api_key:
         console.print("[red]错误: 未找到 VOLC_SECRETKEY。[/red]")
-        return False
+        return None
 
     MODEL_ENDPOINT_ID = "doubao-seed-1-6-lite-251015"
     API_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
@@ -169,25 +170,56 @@ def is_match_volc(cv_text: str, briefing: str) -> bool:
         "reasoning_effort": "medium"
     }
 
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
-        result = response.json()
-        
-        if 'error' in result:
-            console.print(f"[red]火山引擎 API 返回错误: {result['error']['message']}[/red]")
-            return False
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+            
+            if 'error' in result:
+                error_msg = result['error']['message']
+                if attempt < max_retries - 1:
+                    console.print(f"[yellow]火山引擎 API 错误 (尝试 {attempt+1}/{max_retries}): {error_msg}，重试中...[/yellow]")
+                    import time
+                    time.sleep(2 ** attempt)  # 指数退避: 1s, 2s, 4s
+                    continue
+                else:
+                    console.print(f"[red]火山引擎 API 返回错误: {error_msg}[/red]")
+                    return None
 
-        answer = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip().upper()
-        if not answer: return False
-        
-        color = "green" if "YES" in answer else "red"
-        console.print(f"--- 火山引擎 AI 判断结果: [{color}]{answer}[/{color}] ---")
-        return "YES" in answer
+            answer = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip().upper()
+            if not answer:
+                if attempt < max_retries - 1:
+                    console.print(f"[yellow]AI 返回空结果 (尝试 {attempt+1}/{max_retries})，重试中...[/yellow]")
+                    import time
+                    time.sleep(2 ** attempt)
+                    continue
+                return None
+            
+            color = "green" if "YES" in answer else "red"
+            console.print(f"--- 火山引擎 AI 判断结果: [{color}]{answer}[/{color}] ---")
+            return "YES" in answer
 
-    except Exception as e:
-        console.print(f"[red]火山引擎 API 请求出错: {e}[/red]")
-        return False
+        except requests.exceptions.Timeout:
+            if attempt < max_retries - 1:
+                console.print(f"[yellow]API 请求超时 (尝试 {attempt+1}/{max_retries})，重试中...[/yellow]")
+                import time
+                time.sleep(2 ** attempt)
+                continue
+            else:
+                console.print(f"[red]火山引擎 API 请求超时 (已重试 {max_retries} 次)[/red]")
+                return None
+        except Exception as e:
+            if attempt < max_retries - 1:
+                console.print(f"[yellow]API 请求出错 (尝试 {attempt+1}/{max_retries}): {e}，重试中...[/yellow]")
+                import time
+                time.sleep(2 ** attempt)
+                continue
+            else:
+                console.print(f"[red]火山引擎 API 请求出错: {e}[/red]")
+                return None
+    
+    return None
 
 def summarize_profile_volc(cv_text: str, target_company: str) -> str:
     api_key = VOLC_SECRETKEY
@@ -670,10 +702,15 @@ class LiepinScraper:
                                             raw_work_time = await profile_page.locator(work_time_selector).first.text_content(timeout=5000)
                                             work_time = format_work_time(raw_work_time)
                                             if not is_departure_date_ok(work_time, self.config['min_departure']):
+                                                console.print(f"[yellow]离职时间不符: {work_time} (要求不早于 {self.config['min_departure']})[/yellow]")
                                                 consecutive_failure_count += 1
                                                 progress.update(task_id, processed=self.processed_resumes_count)
                                                 continue
-                                        except Exception: continue
+                                        except Exception as e:
+                                            console.print(f"[yellow]无法提取工作时间 (选择器可能失效): {e}[/yellow]")
+                                            consecutive_failure_count += 1
+                                            progress.update(task_id, processed=self.processed_resumes_count)
+                                            continue
 
                                         # --- Early Extraction for Deduplication ---
                                         name = await profile_page.locator('div.resume-preview-name, .person-name, .resume-name, .name-text, .contact-name, h4.name').first.text_content(timeout=5000)
@@ -703,7 +740,13 @@ class LiepinScraper:
                                         
                                         # 3. AI Check
                                         cv_text = await profile_page.locator(CV_TEXT_SELECTOR).text_content(timeout=5000)
-                                        if not is_match_volc(cv_text, briefing_text):
+                                        match_result = is_match_volc(cv_text, briefing_text)
+                                        if match_result is None:
+                                            console.print("[yellow]AI API 失败，跳过此候选人[/yellow]")
+                                            consecutive_failure_count += 1
+                                            progress.update(task_id, processed=self.processed_resumes_count)
+                                            continue
+                                        elif not match_result:
                                             consecutive_failure_count += 1
                                             progress.update(task_id, processed=self.processed_resumes_count)
                                             continue
