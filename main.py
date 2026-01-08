@@ -744,7 +744,7 @@ class LiepinScraper:
                                         candidate_signature = (extract_name_first_char(clean_name), title.strip(), work_time.strip())
                                         if candidate_signature in self.seen_candidates:
                                             console.print(f"[yellow]发现重复候选人: {clean_name} - {title}，跳过 (节省AI额度)。[/yellow]")
-                                            consecutive_failure_count += 1 
+                                            # Note: Do NOT increment consecutive_failure_count for duplicates
                                             progress.update(task_id, processed=self.processed_resumes_count)
                                             continue
                                         
