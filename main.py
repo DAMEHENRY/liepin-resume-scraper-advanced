@@ -537,18 +537,18 @@ class LiepinScraper:
         console.print(table)
 
     def save_data_to_excel(self):
+        # Track old file path for cleanup after successful save
+        old_path_to_delete = None
+        
         if self.is_default_filename and self.actually_searched_positions:
             pos_part = "-".join(self.actually_searched_positions)
             new_filename = f"{self.base_default_filename}-{pos_part}.xlsx"
             new_full_path = os.path.join('data', new_filename)
             
             if new_full_path != self.output_filename:
-                # 如果旧文件存在，稍后删除
-                old_path = self.output_filename
+                # Remember old file for deletion AFTER successful save
+                old_path_to_delete = self.output_filename
                 self.output_filename = new_full_path
-                if os.path.exists(old_path):
-                    try: os.remove(old_path)
-                    except: pass
 
         with self.contacts_lock:
             if not self.output_filename or not self.saved_contacts:
@@ -566,9 +566,19 @@ class LiepinScraper:
             n, m = self.qualified_resumes_count, self.processed_resumes_count
 
         try:
+            # Save new file FIRST (critical: do this before deleting old file)
             df.to_excel(self.output_filename, index=False, engine='openpyxl')
             console.print(f"[green]--- (保存请求) {len(df)} 条数据已成功保存到: {self.output_filename} ---[/green]")
             console.print(f"[bold]--- (保存请求) 当前进度: {n}/{m} (合格/已看) ---[/bold]")
+            
+            # Only delete old file AFTER successful save
+            if old_path_to_delete and os.path.exists(old_path_to_delete):
+                try:
+                    os.remove(old_path_to_delete)
+                    console.print(f"[dim]已清理旧文件: {os.path.basename(old_path_to_delete)}[/dim]")
+                except Exception as e:
+                    console.print(f"[yellow]无法删除旧文件 {os.path.basename(old_path_to_delete)}: {e}[/yellow]")
+                    
         except Exception as e:
             console.print(f"[red]--- (保存请求) 保存到 Excel 时出错: {e} ---[/red]")
 
