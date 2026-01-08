@@ -405,7 +405,7 @@ class LiepinScraper:
         # 1. 基础信息预收集 (为了生成默认文件名)
         category = Prompt.ask("[bold cyan]请输入分类 (例如: 上游/下游)[/bold cyan]")
         companies_str = Prompt.ask("[bold cyan]请输入公司和配额，用'/'分隔 (格式: 公司A 10/公司B 5)[/bold cyan]")
-        positions_str = Prompt.ask("[bold cyan]请输入目标职位 (例如: 产品经理-数据分析师)[/bold cyan]", default="", show_default=False)
+        positions_str = Prompt.ask("[bold cyan]请输入关键词 (例如: 产品经理-数据分析师)[/bold cyan]", default="", show_default=False)
 
         # 解析公司和职位
         target_companies_info = []
@@ -437,7 +437,7 @@ class LiepinScraper:
         
         im.add_step('category', "确认分类", default=category)
         im.add_step('companies', "确认公司配额", default=companies_str)
-        im.add_step('positions', "确认目标职位 (用'-'分隔)", default=positions_str)
+        im.add_step('positions', "确认关键词 (用'-'分隔)", default=positions_str)
         
         def process_briefing(val):
             return "DEFAULT" if val.lower() == 'y' else "CUSTOM"
