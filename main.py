@@ -529,7 +529,7 @@ class LiepinScraper:
                 cols_in_order = [col for col in desired_order if col in df.columns]
                 df = df[cols_in_order]
                 df.insert(0, '序号', range(1, 1 + len(df)))
-                if '公司' in df.columns: df.sort_values(by='公司', inplace=True)
+                if '序号' in df.columns: df.sort_values(by='序号', ascending=True, inplace=True)
             
             n, m = self.qualified_resumes_count, self.processed_resumes_count
 
