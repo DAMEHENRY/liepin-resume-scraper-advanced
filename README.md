@@ -8,69 +8,62 @@
 ## 🇬🇧 English Description
 
 ### Introduction
-**Liepin Resume Scraper Advanced** is a powerful automation tool designed to streamline the recruitment process on Liepin.com. It leverages **Playwright** for browser automation and **Volcengine AI (Doubao)** for intelligent candidate screening.
-
-This tool automatically searches for candidates, analyzes their resumes against your specific job requirements using AI, saves qualified resumes as clean Word documents (.docx), and generates detailed Excel reports.
+**Liepin Resume Scraper Advanced** is a professional automation tool designed to streamline recruitment on Liepin.com. It combines **Playwright** browser automation with **Volcengine AI (Doubao)** for intelligent candidate screening and profile summarization.
 
 ### Key Features
-- **🤖 AI-Powered Screening**: Uses Volcengine (Doubao) API to verify if a candidate matches your job description (YES/NO) and generates a concise profile summary.
-- **📄 Format Conversion**: Automatically saves web resumes as formatted `.docx` files (removing ads and broken images).
-- **📦 Smart Archiving**: Bundles resumes into ZIP files by company and quota.
-- **📊 Excel Reporting**: Generates a comprehensive `.xlsx` report with a optimized column order (Category, Company, Name, current Company, Position, etc.).
+- **🤖 AI Screening**: Uses Doubao API to verify candidate-job fit (YES/NO) and generate concise profile summaries.
+- **📄 Clean Conversion**: Saves web resumes as formatted `.docx` files, stripping ads and broken elements.
+- **📂 Smart Management**: 
+    - **Archiving**: Automatically archives old data to `archive_YYYYMMDD_HHMMSS` folders if you choose not to clear directories.
+    - **Deduplication**: Automatically loads historical Excel data to avoid re-processing or paying for the same candidate twice.
+- **📦 Bundling**: Groups resumes into ZIP files named `Liepin-[Company]-[Count]-[ID].zip`.
+- **📊 Dynamic Reporting**: 
+    - Generates optimized Excel reports (Name moved forward for better readability).
+    - **Auto-Naming**: Excel files are automatically named `Category-Company-Keyword.xlsx` and dynamically updated based on search progress.
 - **⚡️ Efficiency**: 
-    - **Deduplication**: Checks local history to avoid re-processing or paying for the same candidate twice.
-    - **Early Stopping**: Automatically skips irrelevant positions after consecutive failures.
-    - **Resume Mode**: Supports resuming session cookies to avoid frequent logins.
-    - **Automatic Naming**: Excel files are automatically named based on your inputs and dynamically updated to reflect only the actual positions searched.
-- **💻 CLI Interface**: Beautiful terminal UI with progress bars, color-coded logs, and interactive configuration.
-
-### Prerequisites
-- Python 3.8+
-- A [Volcengine](https://www.volcengine.com/) Account (for AI analysis) with an API Key.
-- Chrome/Chromium browser (installed automatically via Playwright).
+    - **Early Stopping**: Skips irrelevant keywords after 10 consecutive failures.
+    - **Keyword Search**: Supports multiple keywords separated by `-`.
+    - **Headless Mode**: Runs in the background by default for a seamless experience.
+- **💻 Pro CLI**: Colorful terminal UI with progress bars, input "back" functionality, and real-time stats.
 
 ### Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/DAMEHENRY/liepin-resume-scraper-advanced.git
-   cd liepin-resume-scraper-advanced
-   ```
+#### 1. From Source (All Platforms: Windows, Mac, Linux)
+Ensure you have **Python 3.8+** installed.
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   playwright install chromium
-   ```
+1.  **Clone & Enter:**
+    ```bash
+    git clone https://github.com/DAMEHENRY/liepin-resume-scraper-advanced.git
+    cd liepin-resume-scraper-advanced
+    ```
+2.  **Install Dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  **Browser Setup:**
+    ```bash
+    playwright install chromium
+    ```
+4.  **Environment Configuration:**
+    Create a `.env` file in the root directory:
+    ```env
+    VOLC_SECRETKEY=your_actual_api_key_here
+    ```
 
-3. **Configure Environment Variables:**
-   Create a `.env` file in the root directory and add your Volcengine API Key:
-   ```env
-   VOLC_SECRETKEY=your_actual_api_key_here
-   ```
+#### 2. Standalone Executable (No Python Required)
+-   **Mac**: 
+    - Run `sh build_mac.sh` to generate `dist/LiepinScraper`.
+    - Or download the pre-built binary if available.
+-   **Windows**: 
+    - Use PyInstaller: `pyinstaller --noconfirm --onefile --console --name "LiepinScraper" --add-data "libs;libs" --hidden-import "rich" main.py`.
+    - Find `LiepinScraper.exe` in the `dist` folder.
+-   **Linux**: Recommended to run via source (Step 1).
 
 ### Usage
-
-1. **Run the script:**
-   ```bash
-   python main.py
-   ```
-
-2. **Login:**
-   - On the first run, a browser window will open.
-   - Log in to Liepin.com manually.
-   - Return to the terminal and press Enter. The session will be saved to `state.json`.
-
-3. **Follow the CLI prompts** to set:
-   - Target Companies (e.g., `Google 10/Microsoft 5`)
-   - Target Positions (Use `-` as separator, e.g., `Product-Research`)
-   - Output Filename (Default: `Category-Company-Position.xlsx`)
-   - Resume Filters (Age, Last Login, etc.)
-
-### Output Structure
-- `data/`: Contains the Excel reports (`.xlsx`).
-- `resumes/`: Individual candidate resumes (`.docx`).
-- `zips/`: Compressed packages of resumes grouped by company.
+1.  **Run**: `python main.py` (or double-click the executable).
+2.  **Login**: On first run, a browser opens for manual login. Session is saved to `state.json`.
+3.  **Configure**: Follow CLI prompts to set Category, Companies (e.g., `Google 10/MS 5`), and Keywords (e.g., `Product-Data`).
+4.  **Monitor**: View real-time progress in the terminal.
 
 ---
 
@@ -78,162 +71,105 @@ This tool automatically searches for candidates, analyzes their resumes against 
 ## 🇨🇳 中文介绍
 
 ### 简介
-**猎聘简历自动化高级助手** 是一款专为猎聘网（Liepin.com）设计的高效招聘辅助工具。它结合了 **Playwright** 浏览器自动化技术和 **火山引擎 (豆包)** 的大模型能力，实现了从搜索到筛选的全流程自动化。
-
-该工具可以根据您设定的公司和职位自动搜索候选人，利用 AI 智能判断简历是否符合要求，自动下载简历为 Word 文档，并生成详细的 Excel 汇总报表。
+**猎聘简历自动化高级助手** 是一款专为高效招聘设计的自动化工具。它深度整合了 **Playwright** 自动化技术与 **火山引擎 (豆包)** 大模型，实现了从简历搜索、AI 智能初筛到文档归档的全流程闭环。
 
 ### 核心功能
-- **🤖 AI 智能初筛**: 调用火山引擎 API，根据您的“访谈提纲”自动判断候选人是否匹配 (YES/NO)，并生成一句话画像总结。
-- **📄 格式清洗与转换**: 将网页版简历自动保存为排版整洁的 `.docx` 文档，自动移除广告和无效图片。
-- **📦 智能打包**: 按目标公司将下载的简历自动打包为 ZIP 文件，方便归档。
-- **📊 数据报表**: 自动生成结构优化的 Excel 表格，列顺序已针对阅读习惯进行优化。
-- **⚡️ 高效策略**: 
-    - **自动去重**: 启动时加载历史数据，避免重复抓取或浪费 AI token。
-    - **早停机制**: 连续 N 次不匹配自动跳过当前搜索条件，节省时间。
-    - **断点续传**: 支持保存登录状态 (Cookie)，无需每次运行都扫码登录。
-    - **自动化命名**: Excel 文件根据搜集目标自动生成文件名，并随搜索进度动态调整，确保文件名反映真实内容。
-- **💻 交互式终端**: 基于 Rich 库开发的精美 CLI 界面，支持进度条、彩色日志和交互式配置。
-
-### 环境要求
-- Python 3.8 或更高版本
-- [火山引擎](https://www.volcengine.com/) 账号 (用于 AI 分析)，需获取 API Key。
-- Chrome/Chromium 浏览器 (脚本会自动安装)。
+- **🤖 AI 智能初筛**: 调用豆包 API 自动判断候选人匹配度 (YES/NO)，并生成“在职时间+公司+岗位”格式的画像总结。
+- **📄 格式清洗**: 将网页简历转换为排版整洁的 `.docx` 文档，去除冗余广告。
+- **📂 智能文件管理**:
+    - **自动归档**: 启动时可选择保留旧数据，程序将自动移动至 `archive_时间戳` 文件夹。
+    - **精准去重**: 启动时自动扫描历史 Excel 数据，发现“姓名+职位+在职时间”完全匹配时自动跳过，节省资源。
+- **📦 自动打包**: 按公司配额自动生成 `猎聘-[公司]-[数量]-[标识].zip` 压缩包。
+- **📊 自动化报表**:
+    - **表格优化**: 优化列顺序（姓名调前），更符合阅读习惯。
+    - **动态命名**: Excel 文件根据搜集目标自动命名（分类-公司-关键词），并随搜索进度实时修正文件名。
+- **⚡️ 高效策略**:
+    - **早停机制**: 连续 10 份简历不匹配则自动跳过当前关键词。
+    - **关键词搜索**: 支持使用 `-` 分隔多个关键词同时搜索。
+    - **静默运行**: 默认开启无头模式，不干扰日常工作。
+- **💻 极客终端**: 基于 Rich 库开发，支持输入回退 (`b`)、彩色进度条和实时成功率统计。
 
 ### 安装步骤
 
-1. **克隆仓库:**
-   ```bash
-   git clone https://github.com/DAMEHENRY/liepin-resume-scraper-advanced.git
-   cd liepin-resume-scraper-advanced
-   ```
+#### 1. 源码安装 (通用: Windows, Mac, Linux)
+需提前安装 **Python 3.8+**。
 
-2. **安装依赖:**
-   ```bash
-   pip install -r requirements.txt
-   playwright install chromium
-   ```
+1.  **克隆项目:**
+    ```bash
+    git clone https://github.com/DAMEHENRY/liepin-resume-scraper-advanced.git
+    cd liepin-resume-scraper-advanced
+    ```
+2.  **安装依赖库:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  **初始化浏览器环境:**
+    ```bash
+    playwright install chromium
+    ```
+4.  **配置环境变量:**
+    在根目录创建 `.env` 文件并填入：
+    ```env
+    VOLC_SECRETKEY=您的火山引擎API密钥
+    ```
 
-3. **配置环境变量:**
-   在项目根目录下创建一个 `.env` 文件，并填入您的火山引擎密钥：
-   ```env
-   VOLC_SECRETKEY=您的火山引擎API密钥
-   ```
+#### 2. 独立运行程序 (无需 Python)
+-   **Mac 系统**: 
+    - 运行 `sh build_mac.sh` 即可在 `dist/` 目录下生成 `LiepinScraper` 可执行文件。
+-   **Windows 系统**: 
+    - 使用 PyInstaller 打包：`pyinstaller --noconfirm --onefile --console --name "LiepinScraper" --add-data "libs;libs" --hidden-import "rich" main.py`。
+    - 生成的 `LiepinScraper.exe` 位于 `dist` 目录。
+-   **Linux 系统**: 建议通过源码方式运行。
 
-### 使用方法
+### 使用说明
+1.  **启动**: `python main.py` 或双击可执行文件。
+2.  **登录**: 首次运行需在弹出的浏览器中手动扫码登录，状态将存入 `state.json` 以供后续免登录使用。
+3.  **交互配置**: 按提示输入分类、公司及目标份数（如：`腾讯 10/阿里 5`）、搜索关键词（如：`产品经理-数据分析`）。
+4.  **获取结果**: 任务完成后，在 `data/` (Excel), `resumes/` (Word), `zips/` (压缩包) 查看结果。
 
-1. **运行程序:**
-   ```bash
-   python main.py
-   ```
+---
 
-2. **登录账号:**
-   - 首次运行时，程序会弹出一个浏览器窗口。
-   - 请在窗口中手动扫码登录猎聘网。
-   - 登录成功后回到终端按回车，登录状态将保存至 `state.json`。
-
-3. **按提示输入配置:**
-   - 输入目标公司及配额 (如: `腾讯 10/阿里 5`)
-   - 输入目标职位 (使用 `-` 分隔，如: `产品经理-数据分析师`)
-   - 输出文件名 (默认: `分类-公司-职位.xlsx`，可直接回车确认)
-   - 设置筛选条件 (离职时间、最后登录时间等)
-
-### 输出文件说明
-- `data/`: 存放生成的 Excel 汇总表格。
-- `resumes/`: 存放下载的个人简历 Word 文档。
-- `zips/`: 存放按公司打包好的简历压缩包。
-
-### 逻辑流程图 / Logic Flowchart
+### Logic Flowchart / 逻辑流程图
 ```mermaid
 flowchart TD
-    %% Initialization Phase
-    Start([Start]) --> Init[Initialize LiepinScraper]
-    Init --> StartListener[Start Keyboard Listener]
-    StartListener --> BrowserCheck[Ensure Browsers Installed]
-    
-    %% User Configuration Phase
-    BrowserCheck --> LoginQuery{Update Cookie/Login?}
-    LoginQuery -- Yes --> Login[save_session: Manual Login & Save state.json]
-    LoginQuery -- No --> ClearQuery{Clear Output Dirs?}
+    Start([Start]) --> Init[Initialize Scraper]
+    Init --> LoginQuery{Login/Update Cookie?}
+    LoginQuery -- Yes --> Login[Manual Login & Save state.json]
+    LoginQuery -- No --> ClearQuery{Clear or Archive?}
     Login --> ClearQuery
     
-    ClearQuery -- Yes --> Clear[clear_output_directories]
-    ClearQuery -- No --> Archive[archive_output_directories]
+    ClearQuery -- Clear --> ClearDir[Empty Output Folders]
+    ClearQuery -- Archive --> ArchiveDir[Move to archive_...]
     
-    Clear --> LoadHistory[load_historical_data: Load local Excel files]
-    Archive --> LoadHistory
+    ClearDir --> LoadHistory[Load Historical Excel Data]
+    ArchiveDir --> LoadHistory
     
-    LoadHistory --> GetInputs[get_user_inputs: Category, Companies, Positions]
+    LoadHistory --> GetInputs[User Config: Category, Companies, Keywords]
+    GetInputs --> RunSearch[Search Liepin: Company + Keyword]
     
-    %% Main Scraper Logic
-    GetInputs --> RunScraper[run_scraper]
-    RunScraper --> CompanyLoop{For each Target Company}
+    RunSearch --> Deduplicate{Local Deduplication?}
+    Deduplicate -- Found --> Skip[Skip Candidate]
+    Deduplicate -- New --> AICheck{AI Filter & Summary}
     
-    CompanyLoop -- Next Company --> PositionLoop{For each Position}
-    CompanyLoop -- All Done --> SaveExcel[save_data_to_excel]
+    AICheck -- Pass --> Process[Save .docx & Update Excel]
+    AICheck -- Fail --> FailCount[FailCount++]
     
-    PositionLoop -- Next Position --> Search[Search Liepin: Company + Position]
-    PositionLoop -- All Done --> ZipFiles[zip_company_files]
-    ZipFiles --> CompanyLoop
+    Process --> QuotaCheck{Quota Met?}
+    QuotaCheck -- Yes --> Zip[Create Company ZIP]
+    QuotaCheck -- No --> RunSearch
     
-    Search --> PageLoop{For each Page}
-    PageLoop -- Next Page --> CandidateLoop{For each Candidate Link}
-    PageLoop -- No More Pages --> PositionLoop
+    FailCount --> EarlyStop{10 Fails?}
+    EarlyStop -- Yes --> Zip
+    EarlyStop -- No --> RunSearch
     
-    CandidateLoop -- Next Candidate --> PauseCheck{Paused?}
-    CandidateLoop -- No More Candidates --> PageLoop
-    
-    PauseCheck -- Yes --> Wait[Wait...] 
-    Wait --> PauseCheck
-    PauseCheck -- No --> OpenResume[Open Resume Page]
-    
-    %% Validation Chain
-    OpenResume --> CheckLoginDate{Login Date OK?}
-    CheckLoginDate -- No --> CountFail[FailCount++]
-    CheckLoginDate -- Yes --> CheckWorkTime{Departure Date OK?}
-    
-    CheckWorkTime -- No --> CountFail
-    CheckWorkTime -- Yes --> ExtractInfo[Extract Name, Title, Gender]
-    
-    ExtractInfo --> CheckDuplicate{Is Duplicate?}
-    CheckDuplicate -- Yes --> CountFail
-    CheckDuplicate -- No --> AICheck{AI Match Briefing?}
-    
-    AICheck -- No --> CountFail
-    AICheck -- Yes --> CheckCompanyMatch{Current Company Match?}
-    
-    CheckCompanyMatch -- No --> CountFail
-    CheckCompanyMatch -- Yes --> ProcessSuccess[Process Qualified Candidate]
-    
-    CountFail --> NextCandidate[Continue to Next Candidate]
-    NextCandidate --> CandidateLoop
-    
-    %% Success Path
-    ProcessSuccess --> AISummary[AI Summarize Profile]
-    AISummary --> SaveData[Add to Memory saved_contacts]
-    SaveData --> SaveDocx[save_resume_as_docx]
-    SaveDocx --> CheckQuota{Company Quota Met?}
-    
-    CheckQuota -- Yes --> StopPosition[Break Position Loop]
-    StopPosition --> ZipFiles
-    CheckQuota -- No --> ResetFail[Reset FailCount]
-    ResetFail --> NextCandidate
-    
-    %% Finalization
-    SaveExcel --> RestartQuery{Start New Round?}
-    RestartQuery -- Yes --> LoginQuery
-    RestartQuery -- No --> End([End])
-    
-    %% Styling
-    style Start fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
-    style End fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
-    style ProcessSuccess fill:#bbdefb,stroke:#1976d2,stroke-width:2px
-    style SaveData fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style CountFail fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    Zip --> NextCompany{More Companies?}
+    NextCompany -- Yes --> RunSearch
+    NextCompany -- No --> End([End])
 ```
 
 ---
 
 ### Disclaimer / 免责声明
-This tool is for educational and personal efficiency purposes only. Please comply with Liepin.com's Terms of Service and Robots.txt. The author is not responsible for any account restrictions or legal issues arising from the use of this tool.
+This tool is for educational and personal efficiency purposes only. Please comply with Liepin.com's Terms of Service and Robots.txt. The author is not responsible for any account restrictions or legal issues.
 
-本工具仅供学习和个人提效使用。使用时请遵守猎聘网的服务条款及 Robots 协议。因使用本工具导致的账号限制或法律风险，作者不承担任何责任。
+本工具仅供学习和个人提效使用。使用时请遵守猎聘网服务条款。因使用本工具导致的账号风险或法律责任由使用者自行承担。
