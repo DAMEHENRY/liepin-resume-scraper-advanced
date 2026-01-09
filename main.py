@@ -114,22 +114,29 @@ def format_name_to_initials(full_name: str, gender: str) -> str:
     elif gender == "女": return f"{first_char}女士"
     return first_char
 
-def save_resume_as_docx(html_content: str, filename: str) -> bool:
-    try:
-        soup = BeautifulSoup(html_content, 'html.parser')
-        for img in soup.find_all('img'):
-            if img.get('src', '').startswith('data:'): img.decompose()
-        for tag in soup.find_all(True):
-            if 'style' in tag.attrs: del tag.attrs['style']
-        
-        doc = docx.Document()
-        HtmlToDocx().add_html_to_document(str(soup), doc)
-        doc.save(filename)
-        console.print(f"[green]成功保存简历Docx: {filename}[/green]")
-        return True
-    except Exception as e:
-        console.print(f"[red]保存Docx失败: {e}[/red]")
-        return False
+def save_resume_as_docx(html_content: str, filename: str, max_retries: int = 3) -> bool:
+    """保存简历为 docx 文件，支持失败重试机制"""
+    for attempt in range(max_retries):
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            for img in soup.find_all('img'):
+                if img.get('src', '').startswith('data:'): img.decompose()
+            for tag in soup.find_all(True):
+                if 'style' in tag.attrs: del tag.attrs['style']
+            
+            doc = docx.Document()
+            HtmlToDocx().add_html_to_document(str(soup), doc)
+            doc.save(filename)
+            console.print(f"[green]成功保存简历Docx: {filename}[/green]")
+            return True
+        except Exception as e:
+            if attempt < max_retries - 1:
+                console.print(f"[yellow]保存Docx失败 (尝试 {attempt+1}/{max_retries}): {e}，重试中...[/yellow]")
+                time.sleep(1)  # 短暂等待后重试
+            else:
+                console.print(f"[red]保存Docx最终失败 (已重试 {max_retries} 次): {e}[/red]")
+                return False
+    return False
 
 def zip_company_files(company_name: str, file_paths: List[str], output_zip_name: str):
     try:
@@ -773,8 +780,28 @@ class LiepinScraper:
                                         summarized_profile = summarize_profile_volc(cv_text, target_company)
                                         # Name/Title/Gender already extracted above
                                         
+                                        # --- 先尝试保存 docx，成功后才记录数据 ---
+                                        full_html = await profile_page.content()
+                                        
+                                        # 使用临时序号生成文件名 (基于当前合格数+1)
+                                        temp_seq = self.qualified_resumes_count + 1
+                                        base_filename = f"{temp_seq}-猎聘-{clean_name}"
+                                        docx_filename = os.path.join('resumes', f"{base_filename}.docx")
+                                        counter = 1
+                                        while os.path.exists(docx_filename):
+                                            docx_filename = os.path.join('resumes', f"{base_filename}-{counter}.docx")
+                                            counter += 1
+                                        
+                                        # 尝试保存 docx (带重试机制)
+                                        if not save_resume_as_docx(full_html, docx_filename):
+                                            console.print(f"[red]--- 由于 docx 保存失败，跳过此候选人: {clean_name} ---[/red]")
+                                            consecutive_failure_count += 1
+                                            progress.update(task_id, processed=self.processed_resumes_count)
+                                            continue
+                                        
+                                        # --- docx 保存成功，正式记录数据 ---
                                         self.seen_candidates.add(candidate_signature)
-                                        # ---------------------------
+                                        company_generated_files.append(docx_filename)
                                         
                                         contact_info = "未查看"
                                         should_view_phone = self.config['view_phone'].lower() == 'y'
@@ -797,17 +824,6 @@ class LiepinScraper:
                                             })
                                             self.qualified_resumes_count += 1
                                             current_company_qualified_count += 1
-                                        
-                                        full_html = await profile_page.content()
-                                        base_filename = f"{self.qualified_resumes_count}-猎聘-{clean_name}"
-                                        docx_filename = os.path.join('resumes', f"{base_filename}.docx")
-                                        counter = 1
-                                        while os.path.exists(docx_filename):
-                                            docx_filename = os.path.join('resumes', f"{base_filename}-{counter}.docx")
-                                            counter += 1
-                                        
-                                        if save_resume_as_docx(full_html, docx_filename):
-                                            company_generated_files.append(docx_filename)
                                         
                                         consecutive_failure_count = 0
                                         progress.update(task_id, advance=1, qualified=self.qualified_resumes_count, processed=self.processed_resumes_count)
