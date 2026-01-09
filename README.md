@@ -56,6 +56,22 @@ Ensure you have **Python 3.8+** installed.
 3.  **Configure**: Follow CLI prompts to set Category, Companies (e.g., `Google 10/MS 5`), and Keywords (e.g., `Product-Data`).
 4.  **Monitor**: View real-time progress in the terminal.
 
+### 🛠️ Dedup Data Generator Tool
+A standalone utility to quickly convert candidate data into Excel deduplication files.
+
+**Quick Start:**
+```bash
+python3 generate_dedup_data.py
+```
+
+**Features:**
+- 📋 Read from clipboard, text file, or interactive input
+- 🎯 Smart parsing with category support
+- 📊 Auto-formatted Excel output
+- 🎨 Rich terminal UI with preview
+
+**See [DEDUP_TOOL_GUIDE.md](DEDUP_TOOL_GUIDE.md) for detailed usage.**
+
 ---
 
 <a name="chinese"></a>
@@ -109,6 +125,22 @@ Ensure you have **Python 3.8+** installed.
 2.  **登录**: 首次运行需在弹出的浏览器中手动扫码登录，状态将存入 `state.json` 以供后续免登录使用。
 3.  **交互配置**: 按提示输入分类、公司及目标份数（如：`腾讯 10/阿里 5`）、搜索关键词（如：`产品经理-数据分析`）。
 4.  **获取结果**: 任务完成后，在 `data/` (Excel), `resumes/` (Word), `zips/` (压缩包) 查看结果。
+
+### 🛠️ 查重数据生成工具
+独立的辅助工具，快速将候选人数据转换为 Excel 查重文件。
+
+**快速开始:**
+```bash
+python3 generate_dedup_data.py
+```
+
+**功能特性:**
+- 📋 支持从剪贴板、文本文件或交互式输入读取
+- 🎯 智能解析，支持分类识别
+- 📊 自动生成标准格式 Excel
+- 🎨 Rich 终端界面，带数据预览
+
+**详细使用说明请查看 [DEDUP_TOOL_GUIDE.md](DEDUP_TOOL_GUIDE.md)**
 
 ---
 
