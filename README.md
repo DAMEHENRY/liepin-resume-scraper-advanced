@@ -70,7 +70,7 @@ python3 generate_dedup_data.py
 - 📊 Auto-formatted Excel output
 - 🎨 Rich terminal UI with preview
 
-**See [DEDUP_TOOL_GUIDE.md](DEDUP_TOOL_GUIDE.md) for detailed usage.**
+**See [USAGE.md](USAGE.md) for detailed usage.**
 
 ---
 
@@ -140,7 +140,7 @@ python3 generate_dedup_data.py
 - 📊 自动生成标准格式 Excel
 - 🎨 Rich 终端界面，带数据预览
 
-**详细使用说明请查看 [DEDUP_TOOL_GUIDE.md](DEDUP_TOOL_GUIDE.md)**
+**详细使用说明请查看 [USAGE.md](USAGE.md)**
 
 ---
 
