@@ -478,10 +478,7 @@ class LiepinScraper:
         im.add_step('companies', "确认公司配额", default=companies_str)
         im.add_step('positions', "确认关键词 (用'-'分隔)", default=positions_str)
         
-        def process_briefing(val):
-            return "DEFAULT" if val.lower() == 'y' else "CUSTOM"
-        
-        im.add_step('use_default_briefing', "是否使用建议提纲? (Y/n)", default='y', processor=process_briefing)
+
         im.add_step('view_phone', "是否需要查看联系方式? (y/N)", default='n')
         im.add_step('format_name', "姓名是否只保留首字母缩写? (y/N)", default='n')
         im.add_step('filename', "请输入输出文件名", default=default_name)
@@ -508,24 +505,23 @@ class LiepinScraper:
         self.target_positions = [p.strip() for p in self.config['positions'].split('-') if p.strip()]
         
         # Briefing
-        target_position_str = "-".join(self.target_positions)
-        all_companies_str = " 或 ".join([info['name'] for info in self.target_companies_info])
-        default_briefing = f"""
-        访谈提纲核心要求：
-        1. 必须有在 {all_companies_str} 的工作经历。
-        2. 职位与 {target_position_str} 相关。
-        """
-        if self.config['use_default_briefing'] == "DEFAULT":
-            self.briefing_template = default_briefing
-            console.print(Panel(self.briefing_template, title="使用建议提纲"))
-        else:
-            console.print("[yellow]请输入你的自定义访谈提纲 (输入END结束):[/yellow]")
-            lines = []
-            while True:
-                line = input()
-                if line.strip().upper() == "END": break
-                lines.append(line)
-            self.briefing_template = "\n".join(lines)
+        console.print("[yellow]请输入你的访谈提纲 (输入END结束):[/yellow]")
+        lines = []
+        while True:
+            line = input()
+            if line.strip().upper() == "END": break
+            lines.append(line)
+        self.briefing_template = "\n".join(lines)
+        
+        if not self.briefing_template.strip():
+            # If user entered nothing, use a minimal default or just keep it empty? 
+            # The user said "needs manual input", so if they leave it empty, it's their choice.
+            # But let's check if we should still have a fallback if empty.
+            # Actually, the user specifically said "don't have default outline".
+            pass
+        
+        # For display purposes
+        target_position_str = "-".join(self.target_positions) if self.target_positions else "不限"
             
         # Filename
         user_filename = self.config['filename']
@@ -679,9 +675,9 @@ class LiepinScraper:
                                         await profile_page.wait_for_load_state('domcontentloaded')
                                         await profile_page.wait_for_timeout(2000)
                                         
-                                        # --- Validation Logic ---
+                                        # --- Validation Logic (Optimized Order) ---
                                         
-                                        # 1. Login Date
+                                        # 1. Login Date Check
                                         earliest_login_date = parse_login_date_input(self.config['earliest_login'])
                                         actual_login_date_str = "未知"
                                         try:
@@ -704,16 +700,18 @@ class LiepinScraper:
                                             actual_login_date_dt = datetime.strptime(actual_login_date_str, "%Y/%m/%d")
                                             
                                             if earliest_login_date and actual_login_date_dt < earliest_login_date:
+                                                console.print(f"[yellow]登录时间不符: {actual_login_date_str} (要求不晚于 {self.config['earliest_login']})[/yellow]")
                                                 consecutive_failure_count += 1
                                                 progress.update(task_id, processed=self.processed_resumes_count)
                                                 continue
-                                        except Exception:
+                                        except Exception as e:
                                             if earliest_login_date:
+                                                console.print(f"[yellow]无法提取登录时间 (选择器可能失效): {e}[/yellow]")
                                                 consecutive_failure_count += 1
                                                 progress.update(task_id, processed=self.processed_resumes_count)
                                                 continue
 
-                                        # 2. Work Time
+                                        # 2. Work Time Check
                                         try:
                                             work_time_selector = 'div.work-time, .work-duration, .time-text, .work-time-text, .contact-time, span.rd-work-time'
                                             raw_work_time = await profile_page.locator(work_time_selector).first.text_content(timeout=5000)
@@ -729,7 +727,7 @@ class LiepinScraper:
                                             progress.update(task_id, processed=self.processed_resumes_count)
                                             continue
 
-                                        # --- Early Extraction for Deduplication ---
+                                        # 3. Extract Name, Title, Company for field-based checks
                                         name = await profile_page.locator('div.resume-preview-name, .person-name, .resume-name, .name-text, .contact-name, h4.name').first.text_content(timeout=5000)
                                         clean_name = name.strip().replace("*", "")
                                         
@@ -747,7 +745,17 @@ class LiepinScraper:
                                         
                                         title = await profile_page.locator('div.position-name, .work-position, .position-text, .position-title, .contact-position, h6.job-name').first.text_content(timeout=5000)
                                         
-                                        # --- Deduplication Check (Moved Before AI) ---
+                                        company_selector = 'div.company-name, .work-company, .company-text, .company-title, .contact-company, div.rd-work-comp > h5'
+                                        company = await profile_page.locator(company_selector).first.text_content(timeout=5000)
+                                        
+                                        # 4. Company Check (before AI to save API calls)
+                                        if target_company.lower() not in company.lower():
+                                            console.print(f"[yellow]公司名称不符: {company.strip()} (要求包含 {target_company})[/yellow]")
+                                            consecutive_failure_count += 1
+                                            progress.update(task_id, processed=self.processed_resumes_count)
+                                            continue
+                                        
+                                        # 5. Deduplication Check (before AI to save API calls)
                                         candidate_signature = (extract_name_first_char(clean_name), title.strip(), work_time.strip())
                                         if candidate_signature in self.seen_candidates:
                                             console.print(f"[yellow]发现重复候选人: {clean_name} - {title}，跳过 (节省AI额度)。[/yellow]")
@@ -755,7 +763,7 @@ class LiepinScraper:
                                             progress.update(task_id, processed=self.processed_resumes_count)
                                             continue
                                         
-                                        # 3. AI Check
+                                        # 6. AI Check (LAST - most expensive operation)
                                         cv_text = await profile_page.locator(CV_TEXT_SELECTOR).text_content(timeout=5000)
                                         match_result = is_match_volc(cv_text, briefing_text)
                                         if match_result is None:
@@ -768,17 +776,9 @@ class LiepinScraper:
                                             progress.update(task_id, processed=self.processed_resumes_count)
                                             continue
                                         
-                                        # 4. Company Check
-                                        company_selector = 'div.company-name, .work-company, .company-text, .company-title, .contact-company, div.rd-work-comp > h5'
-                                        company = await profile_page.locator(company_selector).first.text_content(timeout=5000)
-                                        if target_company.lower() not in company.lower():
-                                            consecutive_failure_count += 1
-                                            progress.update(task_id, processed=self.processed_resumes_count)
-                                            continue
-                                        
                                         # --- Success & Extraction ---
                                         summarized_profile = summarize_profile_volc(cv_text, target_company)
-                                        # Name/Title/Gender already extracted above
+                                        # Name/Title/Gender/Company already extracted above
                                         
                                         # --- 先尝试保存 docx，成功后才记录数据 ---
                                         full_html = await profile_page.content()
