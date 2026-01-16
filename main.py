@@ -82,16 +82,23 @@ def format_work_time(time_str: str) -> str:
     try:
         cleaned_str = time_str.strip("（）")
         if ',' in cleaned_str: cleaned_str = cleaned_str.split(',')[0].strip()
-        pattern = r"(\d{4})\.(\d{1,2})\s*-\s*(\d{4})\.(\d{1,2})|(\d{4})\.(\d{1,2})\s*-\s*(至今)"
-        match = re.search(pattern, cleaned_str)
+        
+        # 支持中英文的 "至今/To present/present" 格式
+        pattern = r"(\d{4})\.(\d{1,2})\s*-\s*(\d{4})\.(\d{1,2})|(\d{4})\.(\d{1,2})\s*-\s*(至今|To present|present)"
+        match = re.search(pattern, cleaned_str, re.IGNORECASE)
+        
         if not match:
-            if ' - 至今' in cleaned_str:
-                parts = cleaned_str.split(' - 至今')
+            # 备用匹配：处理 " - 至今" 或 " - To present" 格式
+            if re.search(r'\s*-\s*(至今|To present|present)', cleaned_str, re.IGNORECASE):
+                parts = re.split(r'\s*-\s*(?:至今|To present|present)', cleaned_str, flags=re.IGNORECASE)
                 start_match = re.search(r"(\d{4})\.(\d{1,2})", parts[0])
                 if start_match: return f"{start_match.group(1)[-2:]}/{int(start_match.group(2))}-Present"
             return cleaned_str
-        if match.group(1): return f"{match.group(1)[-2:]}/{int(match.group(2))}-{match.group(3)[-2:]}/{int(match.group(4))}"
-        elif match.group(5): return f"{match.group(5)[-2:]}/{int(match.group(6))}-Present"
+        
+        if match.group(1): 
+            return f"{match.group(1)[-2:]}/{int(match.group(2))}-{match.group(3)[-2:]}/{int(match.group(4))}"
+        elif match.group(5): 
+            return f"{match.group(5)[-2:]}/{int(match.group(6))}-Present"
         return cleaned_str
     except Exception: return time_str
 
