@@ -311,7 +311,7 @@ def main():
     # 文件夹清理选项
     if Confirm.ask("是否清空 data, resumes, zips 文件夹下的所有内容? (y=清空, n=归档)", default=False):
         clear_output_directories()
-    elif Confirm.ask("是否归档现有文件? (避免混淆)", default=True):
+    else:
         archive_output_directories()
     
     # 选择数据来源
