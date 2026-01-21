@@ -14,7 +14,9 @@ from rich.table import Table
 from rich.panel import Panel
 import sys
 import re
+import shutil
 from pathlib import Path
+from datetime import datetime
 
 # pyperclip 是可选依赖，仅在使用剪贴板功能时需要
 try:
@@ -252,6 +254,52 @@ def display_preview(candidates):
     console.print(f"\n[cyan]总计: {len(candidates)} 条候选人数据[/cyan]\n")
 
 
+def clear_output_directories():
+    """清空输出目录"""
+    dirs_to_clear = ['data', 'resumes', 'zips']
+    console.print("\n[yellow]--- 正在清空输出目录... ---[/yellow]")
+    for directory in dirs_to_clear:
+        if Path(directory).exists():
+            try:
+                for item in Path(directory).iterdir():
+                    if item.is_file() or item.is_symlink():
+                        item.unlink()
+                    elif item.is_dir():
+                        shutil.rmtree(item)
+                console.print(f"[green]--- 已清空: {directory}/ ---[/green]")
+            except Exception as e:
+                console.print(f"[red]--- 清空 {directory}/ 失败: {e} ---[/red]")
+        else:
+            console.print(f"[dim]--- 目录不存在，跳过: {directory}/ ---[/dim]")
+    console.print("[green]--- 清空完成 ---[/green]\n")
+
+
+def archive_output_directories():
+    """归档输出目录中的旧文件"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_name = f"archive_{timestamp}"
+    dirs_to_archive = ['data', 'resumes', 'zips']
+    
+    console.print(f"\n[yellow]--- 正在归档旧文件到 {archive_name}... ---[/yellow]")
+    
+    for directory in dirs_to_archive:
+        dir_path = Path(directory)
+        if not dir_path.exists():
+            continue
+        archive_path = dir_path / archive_name
+        archive_path.mkdir(exist_ok=True)
+        
+        try:
+            for item in dir_path.iterdir():
+                if item.name == archive_name:
+                    continue
+                shutil.move(str(item), str(archive_path / item.name))
+            console.print(f"[green]--- 已归档 {directory}/ 内容 ---[/green]")
+        except Exception as e:
+            console.print(f"[red]--- 归档 {directory}/ 失败: {e} ---[/red]")
+    console.print("[green]--- 归档完成 ---[/green]\n")
+
+
 def main():
     """主函数"""
     console.print(Panel.fit(
@@ -259,6 +307,12 @@ def main():
         "[dim]支持从剪贴板、文本文件或交互式输入读取候选人数据[/dim]",
         border_style="cyan"
     ))
+    
+    # 文件夹清理选项
+    if Confirm.ask("是否清空 data, resumes, zips 文件夹下的所有内容? (y=清空, n=归档)", default=False):
+        clear_output_directories()
+    elif Confirm.ask("是否归档现有文件? (避免混淆)", default=True):
+        archive_output_directories()
     
     # 选择数据来源
     console.print("\n[bold]请选择数据来源:[/bold]")

@@ -857,6 +857,9 @@ class LiepinScraper:
                                     break
 
                         
+                        # Stop the timer for this company (regardless of quota or early stop)
+                        progress.stop_task(task_id)
+                        
                         if company_generated_files:
                             zip_identifier = self.config['zip_id']
                             zip_name = os.path.join('zips', f"猎聘-{target_company}-{len(company_generated_files)}份-{zip_identifier}.zip")
